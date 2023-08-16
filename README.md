@@ -1,11 +1,5 @@
 # i-Rebalance: Personalized Vehicle Repositioning with Deep Reinforcement Learning
 
-![GitHub repo size](https://img.shields.io/github/repo-size/Haoyang-Chen/I-Rebalance)
-![GitHub stars](https://img.shields.io/github/stars/Haoyang-Chen/I-Rebalance?style=social)
-![GitHub forks](https://img.shields.io/github/forks/Haoyang-Chen/I-Rebalance?style=social)
-![GitHub watchers](https://img.shields.io/github/watchers/Haoyang-Chen/I-Rebalance?style=social)
-![License](https://img.shields.io/github/license/Haoyang-Chen/I-Rebalance)
-
 ## Introduction
 
 Ride-hailing platforms have long grappled with the challenge of effectively balancing the demand and supply of vehicles. Traditional vehicle repositioning techniques often assume uniform behavior among drivers and deterministic relocation strategies. However, in this paper, we propose a more realistic and driver-centric approach to vehicle repositioning.
