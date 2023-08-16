@@ -32,64 +32,6 @@ else:
 np.set_printoptions(threshold=np.inf)
 
 
-class DQN(nn.Module):
-    def __init__(self, input_size=RANGE * 3 + 1, output_size=9):
-        super(DQN, self).__init__()
-        self.net = nn.Sequential(
-            nn.Linear(input_size, HIDDEN_SIZE),
-            nn.ReLU(),
-            nn.Linear(HIDDEN_SIZE, HIDDEN_SIZE),
-            nn.ReLU(),
-            nn.Linear(HIDDEN_SIZE, output_size)
-        )
-
-    def forward(self, x):
-        return self.net(x)
-
-
-class PrioReplayBuffer:
-    def __init__(self, exp_source, buf_size, prob_alpha=0.6):
-        self.exp_source_iter = iter(exp_source)
-        self.prob_alpha = prob_alpha
-        self.capacity = buf_size
-        self.pos = 0
-        self.buffer = []
-        self.priorities = np.zeros((buf_size,), dtype=np.float32)
-
-    def __len__(self):
-        return len(self.buffer)
-
-    def populate(self, count):
-        max_prio = self.priorities.max() if self.buffer else 1.0
-        for _ in range(count):
-            sample = next(self.exp_source_iter)
-            if len(self.buffer) < self.capacity:
-                self.buffer.append(sample)
-            else:
-                self.buffer[self.pos] = sample
-            self.priorities[self.pos] = max_prio
-            self.pos = (self.pos + 1) % self.capacity
-
-    def sample(self, batch_size, beta=0.4):
-        if len(self.buffer) == self.capacity:
-            prios = self.priorities
-        else:
-            prios = self.priorities[:self.pos]
-        probs = prios ** self.prob_alpha
-        probs /= probs.sum()
-
-        indices = np.random.choice(len(self.buffer), batch_size, p=probs)
-        samples = [self.buffer[idx] for idx in indices]
-        total = len(self.buffer)
-        weights = (total * probs[indices]) ** (-beta)
-        weights /= weights.max()
-        return samples, indices, weights
-
-    def update_priorities(self, batch_indices, batch_priorities):
-        for idx, prio in zip(batch_indices, batch_priorities):
-            self.priorities[idx] = prio
-
-
 class Simulation(object):
     def __init__(self, ClusterMode, DemandPredictionMode,  # 聚类模式，预测模式
                  DispatchMode, VehiclesNumber, TimePeriods, LocalRegionBound,  # 调度模式，车辆数int，时间跨度，范围

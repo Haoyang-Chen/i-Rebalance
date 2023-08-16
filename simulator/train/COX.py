@@ -1,27 +1,19 @@
 # -*-coding: utf-8 -*-
 # @Time : 2022/8/3 10:30
 # @Author : Chen Haoyang   SEU
-# @File : RL_algo_COX.py
+# @File : COX.py
 # @Software : PyCharm
 
 import os
-import random
-import time
-
-# from blaze.expr.datetime import dt
 
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 
 from simulator.simulator import *
-from objects import *
 
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import torch.nn.functional as F
-from tqdm import tqdm
 from tensorboardX import SummaryWriter
-from haversine import haversine
 
 import numpy as np
 import ptan
@@ -49,28 +41,78 @@ EPSILON = 0.3
 EPSILON_EP = 1
 
 
+class DQN(nn.Module):
+    def __init__(self, input_size=(KAPPA + 1) * 2 + 1, output_size=9):
+        super(DQN, self).__init__()
+        self.net = nn.Sequential(
+            nn.Linear(input_size, HIDDEN_SIZE),
+            nn.ReLU(),
+            nn.Linear(HIDDEN_SIZE, HIDDEN_SIZE),
+            nn.ReLU(),
+            nn.Linear(HIDDEN_SIZE, output_size)
+        )
 
-def GetStateFunction(self, vehicle_id, cluster, pre_idxs):
-    """
-    for each dispatched taxi i do
-        observe state s^i_t
-        Store tuple (s,a,r,s) into M
-    """
+    def forward(self, x):
+        # print(type(x))
+        return self.net(x)
+
+
+class PrioReplayBuffer:
+    def __init__(self, exp_source, buf_size, prob_alpha=0.6):
+        self.exp_source_iter = iter(exp_source)
+        self.prob_alpha = prob_alpha
+        self.capacity = buf_size
+        self.pos = 0
+        self.buffer = []
+        self.priorities = np.zeros((buf_size,), dtype=np.float32)
+
+    def __len__(self):
+        return len(self.buffer)
+
+    def populate(self, count):
+        max_prio = self.priorities.max() if self.buffer else 1.0
+        for _ in range(count):
+            sample = next(self.exp_source_iter)
+            if len(self.buffer) < self.capacity:
+                self.buffer.append(sample)
+            else:
+                self.buffer[self.pos] = sample
+            self.priorities[self.pos] = max_prio
+            self.pos = (self.pos + 1) % self.capacity
+
+    def sample(self, batch_size, beta=0.4):
+        if len(self.buffer) == self.capacity:
+            prios = self.priorities
+        else:
+            prios = self.priorities[:self.pos]
+        probs = prios ** self.prob_alpha
+        probs /= probs.sum()
+
+        indices = np.random.choice(len(self.buffer), batch_size, p=probs)
+        samples = [self.buffer[idx] for idx in indices]
+        total = len(self.buffer)
+        weights = (total * probs[indices]) ** (-beta)
+        weights /= weights.max()
+        return samples, indices, weights
+
+    def update_priorities(self, batch_indices, batch_priorities):
+        for idx, prio in zip(batch_indices, batch_priorities):
+            self.priorities[idx] = prio
+
+
+def GetStateFunction(self, cluster):
     state = []
     cCluster = cluster
 
     state.append(cCluster.ID)
     state.append(int(self.StayExpect[cCluster.ID] + self.SupplyExpect[cCluster.ID]))
     state.append(int(self.DemandExpect[cCluster.ID]))
-    # state.append(pre_idxs[4])
 
     nClusters = cCluster.Neighbor
 
     for neighbour in nClusters:
         state.append(self.StayExpect[neighbour.ID] + self.SupplyExpect[neighbour.ID])
         state.append(int(self.DemandExpect[neighbour.ID]))
-
-        # state.append(pre_idxs[Getidx(cluster.ID, neighbour.ID)])
 
     while len(state) < (KAPPA + 1) * 2 + 1:
         state.append(0)
@@ -82,10 +124,9 @@ def GetStateFunction(self, vehicle_id, cluster, pre_idxs):
 
 
 def RewardFunction(self, state, vehicle, cluster, pre_idxs):
-    """Supply-demand"""
     Omega_i = 0
     Omega_g = 0
-    cluster_state = GetStateFunction(self, vehicle.ID, cluster, pre_idxs)
+    cluster_state = GetStateFunction(self, cluster)
     Omega_i = cluster_state[1] / (cluster_state[2] + 0.001)
     Omega_g = cluster_state[1 + self.Getidx(cluster.ID, vehicle.Cluster.ID) * 2] / (
             cluster_state[2 + self.Getidx(cluster.ID, vehicle.Cluster.ID) * 2] + 0.001)
@@ -148,19 +189,8 @@ def calc_loss(batch, batch_weights, net, tgt_net, gamma, device='cpu'):
     actions_v = torch.tensor(actions, dtype=torch.int64).to(device)
     rewards_v = torch.tensor(rewards).to(device)
     batch_weights_v = torch.tensor(batch_weights).to(device)
-
-    # print('states_v shape: ', states_v.shape)
-    # print('states_v.unsqueeze(dim=0) shape: ', states_v.unsqueeze(dim=0).shape)
-    # print('net(): ', net(states_v))
-    # print('net() shape: ', net(states_v).shape)
-
-    # print(net(states_v))
-    # print(net(states_v).shape)
-    # print(net(states_v).gather(1, actions_v.unsqueeze(-1)).squeeze(-1))
-    # print(net(states_v).gather(1, actions_v.unsqueeze(-1)).squeeze(-1).shape)
     state_action_values = net(states_v).gather(1, actions_v.unsqueeze(-1)).squeeze(-1)
     next_state_values = tgt_net(next_states_v).max(1)[0]
-
     expected_state_action_values = next_state_values.detach() * gamma + rewards_v
     losses_v = batch_weights_v * (state_action_values - expected_state_action_values) ** 2
     return losses_v.mean(), losses_v + 1e-5
@@ -168,7 +198,6 @@ def calc_loss(batch, batch_weights, net, tgt_net, gamma, device='cpu'):
 
 def train(self):
     M = []
-
     Q_net = DQN().to(device)
     tgt_net = ptan.agent.TargetNet(Q_net)
     opt_Q = optim.Adam(Q_net.parameters())
@@ -184,29 +213,22 @@ def train(self):
         self.RealExpTime = self.Orders[0].ReleasTime
         self.NowOrder = self.Orders[0]
 
-        epsilon = EPSILON - episode * (EPSILON / EPSILON_EP)
-
         total_reward = 0
         self.step = 0
         short = 0
-        step=0
+        step = 0
         reject = 0
 
         EndTime = self.Orders[-1].ReleasTime
-
-        pair_per_cluster = []
-
         while self.RealExpTime <= EndTime:
 
             self.UpdateFunction()
-
             self.MatchFunction()
 
             if (self.step >= REPLAY_PERIOD) and (episode >= 2):
                 M = M[-BUFFER_SIZE:]
                 buffer = PrioReplayBuffer(M, BUFFER_SIZE)
                 buffer.populate(len(M))
-                # print('learning************************')
                 frame_idx = self.step - REPLAY_PERIOD
 
                 StepLearningStartTime = dt.datetime.now()
@@ -215,21 +237,17 @@ def train(self):
 
             pair_per_cluster = []
 
-            ##############################################
             self.SupplyExpectFunction()
             self.DemandPredictFunction(step)
             self.IdleTimeCounterFunction()
-            ##############################################
 
             cluster_counter = 0
             step_reward = 0
 
-            # print('step', step)
             for cluster in self.Clusters:
 
                 cluster_counter += 1
                 vehicle_counter = 0
-                # print('ClusterCounter:', cluster_counter)
 
                 for vehicle in cluster.IdleVehicles:
                     vehicle_counter += 1
@@ -238,9 +256,7 @@ def train(self):
                     pre_idxs = [PreList[5], PreList[6], PreList[7], PreList[4], PreList[8], PreList[0],
                                 PreList[3], PreList[2], PreList[1]]
 
-                    # pre_idxs = [round(x, 3) for x in pre_idxs]
                     pre_idxs = np.array(pre_idxs)
-
                     idxs = pre_idxs.argsort()
                     s = 0
                     for i in idxs:
@@ -250,19 +266,11 @@ def train(self):
                     idxs = idxs[::-1]
                     pre_idxs = minmax_scale(pre_idxs, (0, 1))
 
-                    state = GetStateFunction(self, vehicle.ID, cluster, pre_idxs)
-                    action = DispatchFunction(self, state, Q_net, episode, epsilon)
-
-                    #
-                    # state_v = torch.tensor(state, dtype=torch.float32)
-                    # writer.add_graph(Alter_DQN(), (state_v.unsqueeze(dim=0)))
-
+                    state = GetStateFunction(self, cluster)
+                    action = DispatchFunction(self, state, Q_net)
                     self.move(vehicle, action, cluster, pre_idxs, idxs)
-
-                    new_state = GetStateFunction(self, vehicle.ID, cluster, pre_idxs)
-
+                    new_state = GetStateFunction(self, cluster)
                     reward = RewardFunction(self, state, vehicle, cluster, pre_idxs)
-                    # print('reward:', reward)
 
                     total_reward += reward
                     step_reward += reward
@@ -338,18 +346,13 @@ def train(self):
         print("Total Order value: " + str(SumOrderValue))
 
         writer.add_scalar("Total Order value: ", SumOrderValue, episode)
-
-        # print("Total Update Time : " + str(self.TotallyUpdateTime))
-        # print("Total NextState Time : " + str(self.TotallyNextStateTime))
         print("Total Learning Time : " + str(self.TotallyLearningTime))
-        # print("Total Demand Predict Time : " + str(self.TotallyDemandPredictTime))
-        # print("Total Dispatch Time : " + str(self.TotallyDispatchTime))
-        # print("Total Simulation Time : " + str(self.TotallyMatchTime))
         print("Episode Run time : " + str(EpisodeEndTime - EpisodeStartTime))
 
     return
 
-def DispatchFunction(self, state, net, ep, epsilon):
+
+def DispatchFunction(self, state, net):
     self.DispatchNum += 1
     state_v = torch.tensor(state, dtype=torch.float32).to(device)
     output = net(state_v.unsqueeze(dim=0)).reshape(1, KAPPA + 1)
