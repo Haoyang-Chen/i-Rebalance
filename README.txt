@@ -1,0 +1,11 @@
+Config:里面的setting.py用于对仿真环境做一些全局的设置
+Objects:在objects.py里定义了格子、订单、车辆三个类的属性
+preprocessing:用readfiles.py来读文件，包含地图、车辆、订单、偏好模型
+simulator:
+里面的data文件夹用于存放readfiles.py需要的数据，
+runs文件夹存放tensorboard训练过程中画的图，
+其他的文件夹存放的都是训练好的模型，
+Simulator.py定义了整个仿真环境，包含了环境的初始化、车辆订单匹配、环境随时间的更新、等一些辅助函数
+RL_algo.py是训练文件，里面定义了智能体与环境交互的逻辑。文件名带有（RL_algo*****.py)的文件均为对应模型的训练文件
+以test开头的文件均为测试文件，对应不同模型的测试。
+Greedy.py、RANDOM.py等没有规则命名的文件为baseline。
