@@ -240,7 +240,7 @@ def TEST(self, rand, pre, a, reject_rate, avg_wait, pre_reject, num_disp, idxx, 
                     vehicle.DeliveryPoint = RandomNode
 
                     ScheduleCost = self.RoadCost(vehicle.LocationNode, RandomNode)
-                    self.TotallyDispatchCost += self.RoadDist(vehicle.LocationNode, RandomNode)
+                    self.TotallyDispatchCost += self.RoadDistance(vehicle.LocationNode, RandomNode)
 
                     vehicle.Cluster.VehiclesArrivetime[vehicle] = min(self.RealExpTime + np.timedelta64(
                         MINUTES * ScheduleCost), self.RealExpTime + self.TimePeriods)

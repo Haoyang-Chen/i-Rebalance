@@ -99,7 +99,7 @@ def DemandPredictFunction(self):
         if self.RealExpTime + self.TimePeriods <= order.ReleasTime < self.RealExpTime + 2 * self.TimePeriods:
             self.DemandExpect[self.NodeID2Cluseter[order.PickupPoint].ID] += 1
             cluster = self.NodeID2Cluseter[order.PickupPoint]
-            rodedist = self.RoadDist(order.PickupPoint, order.DeliveryPoint)
+            rodedist = self.RoadDistance(order.PickupPoint, order.DeliveryPoint)
             value = self.GetValue(rodedist)
             cluster.potential += value
         if self.RealExpTime <= order.ReleasTime <= self.RealExpTime + self.TimePeriods:

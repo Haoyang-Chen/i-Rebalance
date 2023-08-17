@@ -134,7 +134,7 @@ def move(self, vehicle, action, cluster, pre_idxs, idxs):
     vehicle.DeliveryPoint = RandomNode
 
     ScheduleCost = self.RoadCost(vehicle.LocationNode, RandomNode)
-    self.TotallyDispatchCost += self.RoadDist(vehicle.LocationNode, RandomNode)
+    self.TotallyDispatchCost += self.RoadDistance(vehicle.LocationNode, RandomNode)
 
     vehicle.Cluster.VehiclesArrivetime[vehicle] = min(self.RealExpTime + np.timedelta64(
         MINUTES * ScheduleCost), self.RealExpTime + self.TimePeriods)

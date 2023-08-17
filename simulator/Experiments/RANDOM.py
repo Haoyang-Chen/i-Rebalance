@@ -146,7 +146,7 @@ def DemandPredictFunction(self):
         if self.RealExpTime + self.TimePeriods <= order.ReleasTime < self.RealExpTime + 2 * self.TimePeriods:
             self.DemandExpect[self.NodeID2Cluseter[order.PickupPoint].ID] += 1
             cluster = self.NodeID2Cluseter[order.PickupPoint]
-            rodedist = self.RoadDist(order.PickupPoint, order.DeliveryPoint)
+            rodedist = self.RoadDistance(order.PickupPoint, order.DeliveryPoint)
             value = self.GetValue(rodedist)
             cluster.potential += value
 
@@ -199,7 +199,7 @@ def move(self, vehicle, action, cluster, pre_idxs, idxs):
     vehicle.DeliveryPoint = RandomNode
 
     ScheduleCost = self.RoadCost(vehicle.LocationNode, RandomNode)
-    self.TotallyDispatchCost += self.RoadDist(vehicle.LocationNode, RandomNode)
+    self.TotallyDispatchCost += self.RoadDistance(vehicle.LocationNode, RandomNode)
 
     vehicle.Cluster.VehiclesArrivetime[vehicle] = min(self.RealExpTime + np.timedelta64(
         MINUTES * ScheduleCost), self.RealExpTime + self.TimePeriods)

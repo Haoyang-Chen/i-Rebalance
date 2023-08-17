@@ -33,20 +33,17 @@ np.set_printoptions(threshold=np.inf)
 
 
 class Simulation(object):
-    def __init__(self, ClusterMode, DemandPredictionMode,  # 聚类模式，预测模式
-                 DispatchMode, VehiclesNumber, TimePeriods, LocalRegionBound,  # 调度模式，车辆数int，时间跨度，范围
-                 SideLengthMeter, VehiclesServiceMeter,  # 格子长宽，有效范围
-                 NeighborCanServer, FocusOnLocalRegion):  # 是否跨格子match，范围限制
+    def __init__(self, ClusterMode, DemandPredictionMode,
+                 DispatchMode, VehiclesNumber, TimePeriods, LocalRegionBound,
+                 SideLengthMeter, VehiclesServiceMeter,
+                 NeighborCanServer, FocusOnLocalRegion):
 
-        # Component
         self.step = 0
         self.reject = 0
-
         self.StayNum = 0
         self.DispatchModule = None
         self.DemandPredictorModule = None
 
-        # Statistical variables
         self.OrderNum = 0
         self.RejectNum = 0
         self.DispatchNum = 0
@@ -63,7 +60,6 @@ class Simulation(object):
         self.TotallyMatchTime = dt.timedelta()
         self.TotallyDemandPredictTime = dt.timedelta()
 
-        # Data variable
         self.Clusters = None
         self.Orders = None
         self.OrdersbyTime = None
@@ -86,8 +82,6 @@ class Simulation(object):
         self.MapSouthBound = LocalRegionBound[2]
         self.MapNorthBound = LocalRegionBound[3]
 
-        # Input parameters
-
         self.ClusterMode = ClusterMode
         self.DispatchMode = DispatchMode
         self.VehiclesNumber = VehiclesNumber
@@ -95,17 +89,14 @@ class Simulation(object):
         self.LocalRegionBound = LocalRegionBound
         self.SideLengthMeter = SideLengthMeter
         self.VehiclesServiceMeter = VehiclesServiceMeter
-        # self.Preference = Preference
         self.ClustersNumber = None
         self.NumGrideWidth = None
         self.NumGrideHeight = None
         self.NeighborServerDeepLimit = None
 
-        # Control variable
         self.NeighborCanServer = NeighborCanServer
         self.FocusOnLocalRegion = FocusOnLocalRegion
 
-        # Process variable
         self.RealExpTime = None
         self.NowOrder = None
         self.step = None
@@ -113,7 +104,6 @@ class Simulation(object):
 
         self.CalculateTheScaleOfDivision()
 
-        # Demand predictor variable
         self.DemandPredictionMode = DemandPredictionMode
         self.SupplyExpect = None
         self.Supply_obs = None
@@ -127,7 +117,6 @@ class Simulation(object):
         self.IdleCarsCounter = None
         self.Waiting_Time = None
 
-        # Driver Preference
         self.PreList = np.ones((3000, 9))
         self.ClassNetList = None
         self.ClassDict = None
@@ -135,105 +124,7 @@ class Simulation(object):
         self.PoILocation = None
         self.VisFreDict = None
         self.PrePredict = np.zeros((1, 9))
-        self.NaivePre=None      #Baseline: ride_preference
-
-        return
-
-    def Reload(self, OrderFileDate="1101"):  # 导入新一天的数据（没用上）
-        """
-        Read a new order into the simulator and 
-        reset some variables of the simulator
-        """
-        print("Load order " + OrderFileDate + "and reset the experimental environment")
-
-        self.StayNum = 0
-        self.OrderNum = 0
-        self.RejectNum = 0
-        self.DispatchNum = 0
-        self.TotallyDispatchCost = 0
-        self.SumOrderValue = 0
-        self.AutoOrderValue = 0
-        self.AVGreward = 0
-        self.TotallyWaitTime = 0
-        self.TotallyUpdateTime = dt.timedelta()
-        self.TotallyNextStateTime = dt.timedelta()
-        self.TotallyLearningTime = dt.timedelta()
-        self.TotallyDispatchTime = dt.timedelta()
-        self.TotallyMatchTime = dt.timedelta()
-        self.TotallyDemandPredictTime = dt.timedelta()
-
-        self.Orders = None
-        self.TransitionTempPool.clear()
-
-        self.RealExpTime = None
-        self.NowOrder = None
-        self.step = 0
-        self.reject = 0
-
-        # read orders
-        # -----------------------------------------
-        if self.FocusOnLocalRegion == False:
-            Orders = ReadOrder(input_file_path="./data/test/order_2016" + str(OrderFileDate) + ".csv")
-            self.Orders = [
-                Order(i[0], i[1], self.NodeIDList.index(i[2]), self.NodeIDList.index(i[3]), i[1] + PICKUPTIMEWINDOW,
-                      None, None, None) for i in Orders]
-        else:
-            SaveLocalRegionBoundOrdersPath = "./data/test/order_2016" + str(self.LocalRegionBound) + str(
-                OrderFileDate) + ".csv"
-            if os.path.exists(SaveLocalRegionBoundOrdersPath):
-                Orders = ReadResetOrder(input_file_path=SaveLocalRegionBoundOrdersPath)
-                self.Orders = [
-                    Order(i[0], string_pdTimestamp(i[1]), self.NodeIDList.index(i[2]), self.NodeIDList.index(i[3]),
-                          string_pdTimestamp(i[1]) + PICKUPTIMEWINDOW, None, None, None) for i in Orders]
-            else:
-                Orders = ReadOrder(input_file_path="./data/test/order_2016" + str(OrderFileDate) + ".csv")
-                self.Orders = [
-                    Order(i[0], i[1], self.NodeIDList.index(i[2]), self.NodeIDList.index(i[3]), i[1] + PICKUPTIMEWINDOW,
-                          None, None, None) for i in Orders]
-                # Limit order generation area
-                # -------------------------------
-                for i in self.Orders[:]:
-                    if self.IsOrderInLimitRegion(i) == False:
-                        self.Orders.remove(i)
-                # -------------------------------
-                LegalOrdersSet = []
-                for i in self.Orders:
-                    LegalOrdersSet.append(i.ID)
-
-                OutBoundOrdersSet = []
-                for i in range(len(Orders)):
-                    if not i in LegalOrdersSet:
-                        OutBoundOrdersSet.append(i)
-
-                Orders = pd.DataFrame(Orders)
-                Orders = Orders.drop(OutBoundOrdersSet)
-                Orders.to_csv(SaveLocalRegionBoundOrdersPath, index=0)
-        # -----------------------------------------
-
-        # Rename orders'ID
-        # -------------------------------
-        for i in range(len(self.Orders)):
-            self.Orders[i].ID = i
-        # -------------------------------
-
-        # Calculate the value of all orders in advance
-        # -------------------------------
-        for EachOrder in self.Orders:
-            # EachOrder.OrderValue = self.RoadCost(EachOrder.PickupPoint, EachOrder.DeliveryPoint)
-            EachOrder.OrderValue = self.Map[EachOrder.PickupPoint][EachOrder.DeliveryPoint]
-        # -------------------------------
-
-        # Reset the Clusters and Vehicles
-        # -------------------------------
-        for i in self.Clusters:
-            i.Reset()
-
-        for i in self.Vehicles:
-            i.Reset()
-
-        self.InitVehiclesIntoCluster()
-        # -------------------------------
-
+        self.NaivePre=None
         return
 
     def Reset(self):
@@ -280,29 +171,22 @@ class Simulation(object):
     def InitVehiclesIntoCluster(self):
         print("Initialization Vehicles into Clusters or Grids")
         for i in self.Vehicles:
-            # i.Cluster = self.NodeID2Cluseter[i.LocationNode]
-            # i.Cluster.VehiclesArrivetime[i] = i.StartTime
             while True:
                 RandomNode = random.choice(range(len(self.Node)))
                 if RandomNode in self.NodeID2Cluseter:
                     i.LocationNode = RandomNode
                     i.Cluster = self.NodeID2Cluseter[i.LocationNode]
-                    # i.Cluster.IdleVehicles.append(i)
                     i.Cluster.VehiclesArrivetime[i] = i.StartTime
                     i.DeliveryPoint = i.LocationNode
                     break
 
     def RoadCost(self, start, end):
         dist = self.Map[start][end]
-        # if dist == 100:
-        #     dist = 10
         res = 30 * dist / 11
         return int(res // 1 + (res % 1 > 0))
 
-    def RoadDist(self, start, end):
+    def RoadDistance(self, start, end):
         dist = self.Map[start][end]
-        # if dist == 100:
-        #     dist = 10
         return dist
 
     def GetValue(self, dist):
@@ -365,7 +249,7 @@ class Simulation(object):
         print("Create Grids")
         self.Clusters = self.CreateGrid()
 
-        # Construct NodeID to Cluseter map for Fast calculation     把节点映射到cluster里
+        # Construct NodeID to Cluseter map for Fast calculation
         NodeID = self.Node['id'].values
         for i in range(len(NodeID)):
             NodeID[i] = self.NodeIDList.index(NodeID[i])
@@ -428,7 +312,7 @@ class Simulation(object):
         print("Create Grids")
         self.Clusters = self.CreateGrid()
 
-        # Construct NodeID to Cluseter map for Fast calculation     把节点映射到cluster里
+        # Construct NodeID to Cluseter map for Fast calculation
         NodeID = self.Node['id'].values
         for i in range(len(NodeID)):
             NodeID[i] = self.NodeIDList.index(NodeID[i])
@@ -486,7 +370,6 @@ class Simulation(object):
             return False
 
         return True
-        # 越界
 
     def IsNodeInLimitRegion(self, TempNodeList):
         if TempNodeList[0][0] < self.LocalRegionBound[0] or TempNodeList[0][0] > self.LocalRegionBound[1]:
@@ -636,32 +519,6 @@ class Simulation(object):
             if RightDownNeighbor:
                 i.Neighbor.append(AllGrid[i.ID - self.NumGrideWidth + 1])
             # ----------------------------
-
-        # You can draw every grid(red) and neighbor(random color) here
-        # ----------------------------------------------
-        #
-        # for i in range(len(AllGrid)):
-        #     print("Grid ID ",i,AllGrid[i])
-        #     print(AllGrid[i].Neighbor)
-        #     self.DrawOneCluster(Cluster = AllGrid[i],random = False,show = False)
-        #
-        #     for j in AllGrid[i].Neighbor:
-        #         if j.ID == AllGrid[i].ID :
-        #             continue
-        #         print(j.ID)
-        #         self.DrawOneCluster(Cluster = j,random = True,show = False)
-        #     plt.xlim(104.007, 104.13)
-        #     plt.ylim(30.6119, 30.7092)
-        #     plt.show()
-        #
-        # ----------------------------------------------
-
-        # for grid in AllGrid:
-        #     grid.Example()
-        # AllGrid[0].Example()
-        # AllGrid[1].Example()
-        # AllGrid[11].Example()
-
         return AllGrid
 
     def Normaliztion_1D(self, arr):
@@ -687,16 +544,14 @@ class Simulation(object):
         """
         Here you can implement your own order forecasting method
         to provide efficient and accurate help for Dispatch method
-        传当前time slot内对应的订单数量
         """
         self.DemandExpect = torch.zeros(self.ClustersNumber)
         DE = torch.zeros(self.ClustersNumber)
         for order in self.OrdersbyTime[step+1]:
-        # for order in self.Orders:
             if self.RealExpTime + self.TimePeriods <= order.ReleasTime < self.RealExpTime + 2 * self.TimePeriods:
                 self.DemandExpect[self.NodeID2Cluseter[order.PickupPoint].ID] += 1
                 cluster = self.NodeID2Cluseter[order.PickupPoint]
-                rodedist = self.RoadDist(order.PickupPoint, order.DeliveryPoint)
+                rodedist = self.RoadDistance(order.PickupPoint, order.DeliveryPoint)
                 value = self.GetValue(rodedist)
                 cluster.potential += value
         for order in self.OrdersbyTime[step]:
@@ -723,13 +578,8 @@ class Simulation(object):
         SE = torch.zeros(self.ClustersNumber)
         for i in self.Clusters:
             for key, value in list(i.VehiclesArrivetime.items()):
-                # key = Vehicle ; value = Arrivetime
-                if value <= self.RealExpTime + self.TimePeriods:  # and len(key.Orders) > 0:
+                if value <= self.RealExpTime + self.TimePeriods:
                     self.SupplyExpect[i.ID] += 1
-                # if value <= self.RealExpTime:# and len(key.Orders) > 0:
-                #     SE[i.ID] += 1
-            # print(SE)
-            # self.SupplyExpect[i.ID] += len(i.IdleVehicles)
             SE[i.ID] += len(i.IdleVehicles)
 
         ##########################################################
@@ -756,7 +606,6 @@ class Simulation(object):
                 self.IdleTimeCounter[cluster.ID] += vehicle.idle_start_time
         self.ITC_mat = self.IdleTimeCounter.reshape((1, 1, self.NumGrideHeight, self.NumGrideWidth))
         self.ICC_mat = self.IdleCarsCounter.reshape((1, 1, self.NumGrideHeight, self.NumGrideWidth))
-        # print(self.ICC_mat)
         trans = torch.nn.Conv2d(1, 1, (5, 5), stride=1, padding=2, bias=False)
         trans.weight.data = torch.Tensor([[[[1, 1, 1, 1, 1],
                                             [1, 1, 1, 1, 1],
@@ -765,12 +614,8 @@ class Simulation(object):
                                             [1, 1, 1, 1, 1]]]])
         self.ITC_mat = trans(self.ITC_mat)
         self.ICC_mat = trans(self.ICC_mat)
-        # print(self.ICC_mat)
-        # print(self.ICC_mat.shape)
         self.ITC_mat = self.ITC_mat.view(-1, self.ITC_mat.shape[2] * self.ITC_mat.shape[3]).squeeze()
         self.ICC_mat = self.ICC_mat.view(-1, self.ICC_mat.shape[2] * self.ICC_mat.shape[3]).squeeze()
-        # print("ITC: ",self.ITC_mat)
-        # print("ICC: ",self.ICC_mat)
         self.Waiting_Time = self.step - self.ITC_mat / (self.ICC_mat + 0.01)
         return self.Waiting_Time
 
@@ -785,14 +630,7 @@ class Simulation(object):
         # Count the number of idle vehicles before matching
         for i in self.Clusters:
             i.PerMatchIdleVehicles = len(i.IdleVehicles)
-
-        # counter=0;
-
         while self.NowOrder.ReleasTime < self.RealExpTime + self.TimePeriods:
-            # counter+=1;
-            #########
-            # print(self.NowOrder.ReleasTime)
-            #########
             if self.NowOrder.ID == self.Orders[-1].ID:
                 break
 
@@ -809,11 +647,8 @@ class Simulation(object):
                     # --------------------------------------
 
                     for i in NowCluster.IdleVehicles:
-                        # print(i)
-                        # print('i.LocationNode: ',type(i.LocationNode))
-                        # print('NowOrder.PickupPoint: ', type(self.NowOrder.PickupPoint))
 
-                        TempRoadCost = self.RoadCost(i.LocationNode, self.NowOrder.PickupPoint)  # *MINUTES
+                        TempRoadCost = self.RoadCost(i.LocationNode, self.NowOrder.PickupPoint)
                         if TempMin == None:
                             TempMin = (i, TempRoadCost, NowCluster)
                         elif TempRoadCost < TempMin[1]:
@@ -827,16 +662,9 @@ class Simulation(object):
                     )
 
                 # When all Neighbor Cluster without any idle Vehicles
-                # if TempMin:
-                #     if TempMin[1] > PICKUPTIMEWINDOW:
-                #         print(1)
-                #     print(TempMin[1])
-
                 if TempMin == None or TempMin[1] > PICKUPTIMEWINDOW:
                     self.RejectNum += 1
                     self.NowOrder.ArriveInfo = "Reject"
-                    # self.TotallyWaitTime += 10
-                # Successfully matched a vehicle
                 else:
                     NowVehicle = TempMin[0]
                     self.NowOrder.PickupWaitTime = TempMin[1]
@@ -871,13 +699,10 @@ class Simulation(object):
                 # None available idle Vehicles
                 self.RejectNum += 1
                 self.NowOrder.ArriveInfo = "Reject"
-                # self.TotallyWaitTime += 10
 
             # The current order has been processed and start processing the next order
             # ------------------------------
             self.NowOrder = self.Orders[self.NowOrder.ID + 1]
-
-        # print(counter)
         return
 
     def FindServerVehicleFunction(self, NeighborServerDeepLimit, Visitlist, Cluster, TempMin, deep):
@@ -911,7 +736,6 @@ class Simulation(object):
             i.Orders.clear()
             i.potential = 0
             for key, value in list(i.VehiclesArrivetime.items()):
-                # key = Vehicle ; value = Arrivetime
                 if value <= self.RealExpTime:
                     # update Order
                     if len(key.Orders):
@@ -1004,7 +828,7 @@ class Simulation(object):
         vehicle.DeliveryPoint = RandomNode
 
         ScheduleCost = self.RoadCost(vehicle.LocationNode, RandomNode)
-        self.TotallyDispatchCost += self.RoadDist(vehicle.LocationNode, RandomNode)
+        self.TotallyDispatchCost += self.RoadDistance(vehicle.LocationNode, RandomNode)
 
         vehicle.Cluster.VehiclesArrivetime[vehicle] = min(self.RealExpTime + np.timedelta64(
             MINUTES * ScheduleCost), self.RealExpTime + self.TimePeriods)
@@ -1031,11 +855,10 @@ class Simulation(object):
         return Home_Dis
 
     def PrepareInput(self, Idle_vehicle_list, Date, Day, TimePeriod, traffic_input):
-        Input_matrix = []  # idle_num* 393
+        Input_matrix = []
         for vehicle in Idle_vehicle_list:
             Vehicle_ID = vehicle.ID
             Cluster_ID = vehicle.Cluster.ID
-            # 读取司机专用信息
             HomeDis = self.Cal_HomeDis(Cluster_ID, Vehicle_ID)
             try:
                 Familarity = self.VisFreDict[Vehicle_ID, Cluster_ID]
@@ -1051,7 +874,6 @@ class Simulation(object):
             SumOrderValue = vehicle.Sum_order_value / 5
             PoIDisList = self.PoILocation[Cluster_ID]
 
-            ######记录日志、加载模型、生成preference######
             current = np.zeros((1, 131))
             current[0, 0] = TimePeriod
             current[0, 1] = Day
@@ -1077,14 +899,11 @@ class Simulation(object):
             self.PreList[id] = data[index].cpu().detach().numpy()
 
     def Update_Pre_List(self, classified_id, classified_input, tag):
-        # 第0类
         class_num = len(classified_id[tag])
         id_list = classified_id[tag]
         data = classified_input[tag]
-        # 转换为张量
         data = torch.tensor(np.array(data), dtype=torch.float)
         data = data.view(-1, 131 * 3)
-        # print(data.size())
         Network = self.ClassNetList[tag]
         batch_num = class_num // 64
         surplus_num = class_num % 64
@@ -1093,13 +912,8 @@ class Simulation(object):
             NetworkInput = data[0 + iter_batch * 64:64 + iter_batch * 64, :]
             output = Network(NetworkInput)
             self.Update_Pre_List_batch(id_list[0 + iter_batch * 64:64 + iter_batch * 64], output, 64)
-        # 剩余的
         NetworkInput = torch.zeros([64, 131 * 3])
         NetworkInput[0:surplus_num, :] = data[class_num - surplus_num:class_num, :]
-
-        # tmp=NetworkInput.numpy()
-        # print(tmp)
-
         output = Network(NetworkInput)
         self.Update_Pre_List_batch(id_list[class_num - surplus_num:class_num], output, surplus_num)
 
@@ -1109,8 +923,7 @@ class Simulation(object):
         output = (input - min) / (max - min + 1)
         return output / 3
 
-    def Refresh_Pre(self):  ######################函数入口
-        # 首先调出所有空车
+    def Refresh_Pre(self):
         Idle_vehicle_list = []
         Idle_vehicle_ID_list = []
         for cluster in self.Clusters:
@@ -1118,24 +931,15 @@ class Simulation(object):
                 Idle_vehicle_list.append(Idle_vehicle)
                 Idle_vehicle_ID_list.append(Idle_vehicle.ID)
 
-        time1 = time.time()
-
-        ######  准备通用信息
-        # time
         Date = self.Orders[0].ReleasTime.day
-        Day = (Date % 7 + 3) % 7 + 1  # 2014年8月
+        Day = (Date % 7 + 3) % 7 + 1
         TimePeriod = self.step * 2
 
-        # traffic info
-        # DE_mat = (self.DE_mat-min(self.DE_mat)) / (max(self.DE_mat) - min(self.DE_mat) + 0.01)
-        # SE_mat = (self.SE_mat-min(self.SE_mat)) / (max(self.SE_mat) - min(self.SE_mat)+ 0.01)
-        # Waiting_Time = (self.Waiting_Time-min(self.Waiting_Time))/ (max(self.Waiting_Time) - min(self.Waiting_Time)+0.01)
         DE_mat = self.min_max(self.DE_mat)
         SE_mat = self.min_max(self.SE_mat)
         Waiting_Time = self.min_max(self.Waiting_Time)
         speed = 0.5
 
-        # traffic_input: cluster*100
         traffic_input = []
         for Cluster_ID in range(0, self.NumGrideHeight * self.NumGrideWidth):
             ai = self.NumGrideHeight - 1 - int(Cluster_ID) // self.NumGrideWidth
@@ -1156,10 +960,8 @@ class Simulation(object):
                         tmp.append(Waiting_Time[clu].item())
             traffic_input.append(tmp)
 
-        # 准备每个司机的输入，更新每个司机的日志
         Input_matrix = self.PrepareInput(Idle_vehicle_list, Date, Day, TimePeriod, traffic_input)
 
-        # 把司机的数据分类输入PreNet  self.ClassNetList
         classified_input = [[], [], [], [], []]
         classified_id = [[], [], [], [], []]
         for id in Idle_vehicle_ID_list:
@@ -1167,7 +969,6 @@ class Simulation(object):
             classified_id[classID].append(id)
             classified_input[classID].append(Input_matrix[Idle_vehicle_ID_list.index(id)])
 
-        # 输入网络
         self.Update_Pre_List(classified_id, classified_input, 0)
         self.Update_Pre_List(classified_id, classified_input, 1)
         self.Update_Pre_List(classified_id, classified_input, 2)
