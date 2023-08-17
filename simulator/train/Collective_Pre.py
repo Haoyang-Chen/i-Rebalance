@@ -1,10 +1,9 @@
 # -*-coding: utf-8 -*-
 # @Time : 2022/5/6 19:50 下午
 # @Author : Chen Haoyang   SEU
-# @File : RL_algo.py
+# @File : Collective_Pre.py
 # @Software : PyCharm
 
-import sys
 import os
 
 # sys.path.append(os.path.dirname(sys.path[0]))
@@ -17,9 +16,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
-import torch.nn.utils as nn_utils
 from tensorboardX import SummaryWriter
-from haversine import haversine
 
 import numpy as np
 import argparse
@@ -55,7 +52,6 @@ def LearningFunction(self, minibatch, actor, critic, actor_opt, critic_opt, devi
     next_value_output = next_value_output.squeeze()
     advantage = rewards + GAMMA * next_value_output - value_output
 
-    # actor_loss = - torch.mean(torch.log(action_probs[range(10), actions]) * advantage)
     critic_loss = torch.mean(advantage ** 2)
 
     policy_dist = torch.distributions.Categorical(action_probs)
@@ -83,7 +79,6 @@ def DispatchFunction(self, state, actor, ep, epsilon):
     action = torch.multinomial(action_probs, 1).item()
     if ep < EPSILON_EP and random.randrange(0, 10000) / 10000 < epsilon:
         action = random.randrange(0, 9)
-    # print(action)
     return action
 
 
@@ -93,8 +88,6 @@ class Actor(nn.Module):
         self.net = nn.Sequential(
             nn.Linear(input_size, HIDDEN_SIZE),
             nn.ReLU(),
-            # nn.Linear(HIDDEN_SIZE, HIDDEN_SIZE),
-            # nn.ReLU(),
             nn.Linear(HIDDEN_SIZE, output_size)
         )
 
@@ -108,8 +101,6 @@ class Critic(nn.Module):
         self.net = nn.Sequential(
             nn.Linear(input_size, HIDDEN_SIZE),
             nn.ReLU(),
-            # nn.Linear(HIDDEN_SIZE, HIDDEN_SIZE),
-            # nn.ReLU(),
             nn.Linear(HIDDEN_SIZE, output_size)
         )
 
@@ -124,18 +115,12 @@ def GetStateFunction(self, vehicle_id, cluster, pre_idxs):
 
     state = np.zeros((KAPPA + 1) * 2)
     neighbour = cluster.Neighbor
-    # state[0] = cluster.ID
     state[8] = int(self.SupplyExpect[cluster.ID]) - int(DemandExpect[cluster.ID])
-    # state[13] = int(self.SupplyExpect[cluster.ID]+len(cluster.IdleVehicles))
-    # state[13] = 0
-    # state[14] = int(DemandExpect[cluster.ID])
     state[9] = int(pre_idxs[4])
     for nc in neighbour:
         id = nc.ID
         idx = self.Getidx(cluster.ID, id)
-        # state[idx * 3 + 1] = int(self.SupplyExpect[id]+len(nc.IdleVehicles))
         state[idx * 2] = int(self.SupplyExpect[id]) - int(DemandExpect[id])
-        # state[idx * 3 + 1] = 0
         state[idx * 2 + 1] = pre_idxs[idx]
     return state
 
@@ -163,12 +148,6 @@ def train(self):
     critic = Critic().to(device)
     actor_opt = optim.Adam(actor.parameters(), lr=LEARNING_RATE, eps=1e-3)
     critic_opt = optim.Adam(critic.parameters(), lr=LEARNING_RATE)
-    # actor_name='episode_1011actor'
-    # actor_path=os.path.join(save_path,actor_name)
-    # actor.load_state_dict(torch.load(actor_path, map_location=torch.device('cpu')))
-    # critic_name='episode_1011critic'
-    # critic_path=os.path.join(save_path,critic_name)
-    # critic.load_state_dict(torch.load(critic_path, map_location=torch.device('cpu')))
     seq = [31, 40, 21, 22, 23, 30, 32, 39, 41, 48, 49, 50, 11, 12, 13, 14, 15, 20, 24, 29, 33, 38, 42, 47, 51, 56, 57,
            58, 59, 60, 1, 2, 3, 4, 5, 6, 7, 10, 16, 19, 25, 28, 34, 37, 43, 46, 52, 55, 61, 64, 65, 66, 67, 68, 69, 70,
            0, 8, 9, 17, 18, 26, 27, 35, 36, 44, 45, 53, 54, 62, 63, 71]
@@ -185,7 +164,6 @@ def train(self):
         self.RealExpTime = self.Orders[0].ReleasTime
         self.NowOrder = self.Orders[0]
 
-        # epsilon = EPSILON - episode * (EPSILON / EPSILON_EP)
         epsilon = 0
 
         total_reward = 0
@@ -197,19 +175,14 @@ def train(self):
         while self.RealExpTime <= EndTime:
 
             self.UpdateFunction()
-
             self.MatchFunction()
-
-            ##############################################
             self.SupplyExpectFunction()
             self.DemandPredictFunction(step)
             self.IdleTimeCounterFunction()
-            ##############################################
+            self.Refresh_Pre()
 
             cluster_counter = 0
             step_reward = 0
-
-            self.Refresh_Pre()
 
             for idx in seq:
                 cluster = self.Clusters[idx]
@@ -249,7 +222,6 @@ def train(self):
 
                     state = GetStateFunction(self, vehicle.ID, cluster, pre_idxs2)
                     action = DispatchFunction(self, state, actor, episode, epsilon)
-                    # print('action:',action)
 
                     self.move(vehicle, action, cluster, pre_idxs, idxs)
 

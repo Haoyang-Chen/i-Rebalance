@@ -1,7 +1,7 @@
 # -*-coding: utf-8 -*-
 # @Time : 2022/5/6 19:50 下午
 # @Author : Chen Haoyang   SEU
-# @File : RL_algo.py
+# @File : Seq_A2C.py
 # @Software : PyCharm
 
 import sys
@@ -220,9 +220,6 @@ def train(self):
         self.RealExpTime = self.Orders[0].ReleasTime
         self.NowOrder = self.Orders[0]
 
-        # epsilon = EPSILON - episode * (EPSILON / EPSILON_EP)
-        epsilon = 0
-
         total_reward = 0
         step = 0
         reject = 0
@@ -233,19 +230,14 @@ def train(self):
         while self.RealExpTime <= EndTime:
 
             self.UpdateFunction()
-
             self.MatchFunction()
-
-            ##############################################
             self.SupplyExpectFunction()
             self.DemandPredictFunction(step)
             self.IdleTimeCounterFunction()
-            ##############################################
+            self.Refresh_Pre()
 
             cluster_counter = 0
             step_reward = 0
-
-            self.Refresh_Pre()
 
             v_count = 0
             v_disp = 0
@@ -464,8 +456,8 @@ parser.add_argument("-n", "--name", default='A2C_test', help="Name of the run")
 args = parser.parse_args()
 device = torch.device("cuda:2" if args.cuda else "cpu")
 current_time = datetime.now().strftime('%b%d_%H-%M-%S')
-save_path = os.path.join("../","Models","A2C_pre_nsr", "_", "saves_episode", "Seq-" + args.name)
-save_path2 = os.path.join("../","Models","A2C_pre_nsr", "_", "saves_episode", "VeRL0-" + args.name)
+save_path = os.path.join("../", "Models", "A2C_pre_nsr", "_", "saves_episode", "Seq-" + args.name)
+save_path2 = os.path.join("../", "Models", "A2C_pre_nsr", "_", "saves_episode", "VeRL0-" + args.name)
 os.makedirs(save_path, exist_ok=True)
 
 EXPSIM = Simulation(

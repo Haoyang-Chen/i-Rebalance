@@ -4,7 +4,6 @@
 # @File : RL_algo.py
 # @Software : PyCharm
 
-import sys
 import os
 
 # sys.path.append(os.path.dirname(sys.path[0]))
@@ -16,10 +15,7 @@ from simulator.simulator import *
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import torch.nn.functional as F
-import torch.nn.utils as nn_utils
 from tensorboardX import SummaryWriter
-from haversine import haversine
 
 import numpy as np
 import argparse

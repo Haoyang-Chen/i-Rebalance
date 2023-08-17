@@ -4,7 +4,6 @@
 # @File : RL_algo.py
 # @Software : PyCharm
 
-import sys
 import os
 
 # sys.path.append(os.path.dirname(sys.path[0]))
@@ -13,13 +12,9 @@ os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 
 from simulator.simulator import *
 
-import torch
-import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
-import torch.nn.utils as nn_utils
 from tensorboardX import SummaryWriter
-from haversine import haversine
 from preprocessing.readfiles import *
 
 import numpy as np
@@ -49,25 +44,18 @@ def LearningFunction(self, minibatch, actor, critic, actor_opt, critic_opt, devi
     rewards = torch.stack([x[2] for x in minibatch])
     next_states = torch.stack([x[3] for x in minibatch])
     policy_output = actor(states).view(len(states), BATCH_SIZE, 9)
-    # print('policyout:',policy_output)
-    # print('policyout ',policy_output.shape)
     action_probs = nn.functional.softmax(policy_output, dim=2)
-    # print("action_probs:",action_probs)
-    # print("action_probs ",action_probs.shape)
 
     value_output = critic(states)
     value_output = value_output.squeeze()
-    # print("value_output ",value_output.shape)
 
     next_value_output = critic(next_states)
     next_value_output = next_value_output.squeeze()
 
-    advantage_mask = (actions != -1)  # 创建掩码，标记有效动作为True，无效动作为False
-    # print("advantage_mask ",advantage_mask)
+    advantage_mask = (actions != -1)
     masked_advantage = rewards + GAMMA * next_value_output - value_output
     masked_advantage = masked_advantage.view(len(masked_advantage), -1)
-    masked_advantage = masked_advantage * advantage_mask.float()  # 应用掩码
-    # print("masked_advantage ",masked_advantage.shape)
+    masked_advantage = masked_advantage * advantage_mask.float()
 
     critic_loss = torch.mean(masked_advantage ** 2)
 
@@ -75,22 +63,15 @@ def LearningFunction(self, minibatch, actor, critic, actor_opt, critic_opt, devi
     entropy = policy_dist.entropy()
 
     valid_advantage = masked_advantage * advantage_mask
-    # print("valid_advantage ",valid_advantage.shape)
     valid_actions = actions * advantage_mask
     valid_actions = valid_actions.long()
-    # print("valid_actions ",valid_actions.shape)
-    # print(action_probs[range(len(minibatch)), valid_actions].shape)
     selected_probs = torch.zeros(len(states), BATCH_SIZE).to(device)
     for i in range(len(states)):
         for j in range(BATCH_SIZE):
             selected_probs[i][j] += action_probs[i][j][valid_actions[i][j]]
-    # selected_probs = torch.gather(action_probs, 2, valid_actions).squeeze()
 
     actor_loss = - torch.mean(
         torch.log(selected_probs) * valid_advantage - ENTROPY_BETA * entropy)
-
-    # actor_loss = - torch.mean(
-    #     torch.log(action_probs[range(len(minibatch)), actions]) * advantage - ENTROPY_BETA * entropy)
 
     actor_opt.zero_grad()
     actor_loss.backward(retain_graph=True)
@@ -114,29 +95,8 @@ def DispatchFunction(self, state, actor, ep, epsilon):
         action_list = []
         for i in range(BATCH_SIZE):
             action_list.append(random.randrange(0, 9))
-    # print(action)
     return action_list
 
-
-# class Actor(nn.Module):
-#     def __init__(self, input_size=(KAPPA + 1) * 2 + 1, output_size=BATCH_SIZE * 9):
-#         super().__init__()
-#         self.net = nn.Sequential(
-#             nn.Linear(input_size, HIDDEN_SIZE),
-#             nn.Tanh(),
-#             nn.Linear(HIDDEN_SIZE,HIDDEN_SIZE*2),
-#             nn.Tanh(),
-#             nn.Linear(HIDDEN_SIZE*2,HIDDEN_SIZE*4),
-#             nn.Tanh(),
-#             nn.Linear(HIDDEN_SIZE*4,HIDDEN_SIZE*2),
-#             nn.Tanh(),
-#             nn.Linear(HIDDEN_SIZE*2,output_size),
-#             nn.Tanh(),
-#             nn.Linear(output_size, output_size)
-#         )
-#
-#     def forward(self, x):
-#         return self.net(x)
 
 class Actor(nn.Module):
     def __init__(self, input_size=(KAPPA + 1) * 2 + 1 + BATCH_SIZE * 9, output_size=BATCH_SIZE * 9):
@@ -168,22 +128,6 @@ class Critic(nn.Module):
         return self.net(x)
 
 
-#
-# class Critic(nn.Module):
-#     def __init__(self, input_size=(KAPPA + 1) * 2 + 1, output_size=1):
-#         super().__init__()
-#         self.net = nn.Sequential(
-#             nn.Linear(input_size, HIDDEN_SIZE*2),
-#             nn.Tanh(),
-#             nn.Linear(HIDDEN_SIZE*2, HIDDEN_SIZE),
-#             nn.Tanh(),
-#             nn.Linear(HIDDEN_SIZE, output_size)
-#         )
-#
-#     def forward(self, x):
-#         return self.net(x)
-
-
 def GetStateFunction(self, cluster, pre_idxs_batch):
     DemandExpect = np.array(self.DemandExpect)
     DemandExpect = np.array(np.random.normal(DemandExpect, DemandExpect * 0.2) + 0.5, dtype=int)
@@ -200,9 +144,7 @@ def GetStateFunction(self, cluster, pre_idxs_batch):
         state[idx * 2 + 1] = int(self.SupplyExpect[id] + len(nc.IdleVehicles))
         state[idx * 2 + 2] = int(DemandExpect[id])
     pre_part = []
-    # print(pre_idxs_batch)
     for pre_idx in pre_idxs_batch:
-        # print(pre_idx)
         pre_part += list(pre_idx)
     pre_part = np.array(pre_part)
     state = np.concatenate([state, pre_part], axis=0)
@@ -235,7 +177,6 @@ def train(self):
         self.RealExpTime = self.Orders[0].ReleasTime
         self.NowOrder = self.Orders[0]
 
-        # epsilon = EPSILON - episode * (EPSILON / EPSILON_EP)
         epsilon = 0
 
         total_reward = 0
@@ -247,19 +188,14 @@ def train(self):
         while self.RealExpTime <= EndTime:
 
             self.UpdateFunction()
-
             self.MatchFunction()
-
-            ##############################################
             self.SupplyExpectFunction()
             self.DemandPredictFunction(step)
             self.IdleTimeCounterFunction()
-            ##############################################
+            self.Refresh_Pre()
 
             cluster_counter = 0
             step_reward = 0
-
-            self.Refresh_Pre()
 
             for idx in seq:
                 cluster = self.Clusters[idx]
@@ -329,12 +265,6 @@ def train(self):
                         id = neighbor.ID
                         n_after.append(self.SupplyExpect[id] - self.DemandExpect[id])
 
-                    # s_after = 0
-                    # for n in n_after:
-                    #     s_after += abs(n)
-                    # s_after += abs(self.SupplyExpect[cluster.ID] - self.DemandExpect[cluster.ID])
-                    # s_after /= (len(n_after) + 1)
-
                     after_var = torch.tensor(n_after, dtype=torch.float32).var()
                     before = torch.zeros(72)
                     n_before = []
@@ -345,90 +275,23 @@ def train(self):
                         before[neighbor.ID] += self.SupplyExpect[neighbor.ID] - self.DemandExpect[neighbor.ID]
                         n_before.append(before[neighbor.ID])
 
-                    # s_before = 0
-                    # for n in n_before:
-                    #     s_before += abs(n)
-                    # s_before += abs(self.SupplyExpect[cluster.ID] + len(tran) - self.DemandExpect[cluster.ID])
-                    # s_before /= (len(n_before) + 1)
-
                     before_var = torch.tensor(n_before, dtype=torch.float32).var()
-                    reward = (float(before_var - after_var)) + pre_reward  # + (s_before - s_after)
+                    reward = (float(before_var - after_var)) + pre_reward
                     total_reward += reward
                     step_reward += reward
                     new_state = GetStateFunction(self, cluster, pre_idxs_batch)
                     if self.RealExpTime != EndTime:
                         state_v = torch.tensor(state, dtype=torch.float32).to(device)
-                        # print(joint_action)
                         joint_action_v = torch.tensor(joint_action, dtype=torch.float32).to(device)
                         reward_v = torch.tensor(reward, dtype=torch.float32).to(device)
                         new_state_v = torch.tensor(new_state, dtype=torch.float32).to(device)
                         minibatch.append([state_v, joint_action_v, reward_v, new_state_v])
-                        # cluster.trans.append(dest)
                         if len(minibatch) == 10:
                             LearningFunction(self, minibatch, actor, critic, actor_opt,
                                              critic_opt,
                                              device)
                             minibatch = []
                     cluster.IdleVehicles = cluster.IdleVehicles[BATCH_SIZE::]
-
-            # after_var = torch.zeros(72)
-            # for i in range(72):
-            #     neighbors = self.Clusters[i].Neighbor
-            #     n_after = []
-            #     for neighbor in neighbors:
-            #         id = neighbor.ID
-            #         n_after.append(self.SupplyExpect[id] - self.DemandExpect[id])
-            #     after_var[i] = torch.tensor(n_after, dtype=torch.float32).var()
-
-            # batch_idx = 0
-            # for idx in seq:
-            #     cluster = self.Clusters[idx]
-            #     neighbors = cluster.Neighbor
-            #     n_after = []
-            #     # n_after.append(self.SupplyExpect[cluster.ID]-self.DemandExpect[cluster.ID])
-            #
-            #     for neighbor in neighbors:
-            #         id = neighbor.ID
-            #         n_after.append(self.SupplyExpect[id] - self.DemandExpect[id])
-            #
-            #     s_after = 0
-            #     for n in n_after:
-            #         s_after += abs(n)
-            #     s_after += abs(self.SupplyExpect[cluster.ID] - self.DemandExpect[cluster.ID])
-            #     s_after /= (len(n_after) + 1)
-            #
-            #     after_var = torch.tensor(n_after, dtype=torch.float32).var()
-            #     for tran in cluster.trans:
-            #         before = torch.zeros(72)
-            #         n_before = []
-            #         # n_before.append(self.SupplyExpect[cluster.ID]-self.DemandExpect[cluster.ID]+len(tran))
-            #         for dest in tran:
-            #             before[dest] -= 1
-            #
-            #         for neighbor in neighbors:
-            #             before[neighbor.ID] += self.SupplyExpect[neighbor.ID] - self.DemandExpect[neighbor.ID]
-            #             n_before.append(before[neighbor.ID])
-            #
-            #         s_before = 0
-            #         for n in n_before:
-            #             s_before += abs(n)
-            #         s_before += abs(self.SupplyExpect[cluster.ID] + len(tran) - self.DemandExpect[cluster.ID])
-            #         s_before /= (len(n_before) + 1)
-            #
-            #         before_var = torch.tensor(n_before, dtype=torch.float32).var()
-            #         reward = (before_var - after_var)  # + (s_before - s_after)
-            #         # print('pre_reward',minibatch[batch_idx][2])
-            #         # print('ba_reward',reward)
-            #         minibatch[batch_idx][2] += reward
-            #         total_reward += minibatch[batch_idx][2]
-            #         step_reward += minibatch[batch_idx][2]
-            #         batch_idx += 1
-            #     cluster.trans = []
-            #
-            # if len(minibatch):
-            #     LearningFunction(self, minibatch, actor, critic, actor_opt,
-            #                      critic_opt, device)
-            #     minibatch = []
 
             if episode % 50 == 0:
                 writer.add_scalar('Episode_' + str(episode) + '_reward_per_step', step_reward, step)

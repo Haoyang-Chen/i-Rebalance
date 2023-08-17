@@ -1,10 +1,9 @@
 # -*-coding: utf-8 -*-
 # @Time : 2022/5/6 19:50 下午
 # @Author : Chen Haoyang   SEU
-# @File : RL_algo.py
+# @File : Disp_Seq_A2C.py
 # @Software : PyCharm
 
-import sys
 import os
 
 # sys.path.append(os.path.dirname(sys.path[0]))
@@ -18,9 +17,7 @@ import torch.nn as nn
 import torch.nn.init as init
 import torch.optim as optim
 import torch.nn.functional as F
-import torch.nn.utils as nn_utils
 from tensorboardX import SummaryWriter
-from haversine import haversine
 
 import numpy as np
 import argparse
@@ -86,7 +83,6 @@ def Disp_LearningFunction(self, minibatch, actor, critic, actor_opt, critic_opt,
     next_value_output = next_value_output.squeeze()
     advantage = rewards + GAMMA * next_value_output - value_output
 
-    # actor_loss = - torch.mean(torch.log(action_probs[range(10), actions]) * advantage)
     critic_loss = torch.mean(advantage ** 2)
 
     policy_dist = torch.distributions.Categorical(action_probs)
@@ -506,5 +502,4 @@ EXPSIM = Simulation(
     NeighborCanServer=NeighborCanServer,
     FocusOnLocalRegion=FocusOnLocalRegion,
 )
-# EXPSIM.CreateAllInstantiate()
 train(EXPSIM)

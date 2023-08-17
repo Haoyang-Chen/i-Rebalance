@@ -1,7 +1,7 @@
 # -*-coding: utf-8 -*-
 # @Time : 2022/5/6 19:50 下午
 # @Author : Chen Haoyang   SEU
-# @File : RL_algo.py
+# @File : Disp_A2C_NP.py
 # @Software : PyCharm
 
 import sys
@@ -55,13 +55,13 @@ def LearningFunction(self, minibatch, actor, critic, actor_opt, critic_opt, devi
     next_value_output = next_value_output.squeeze()
     advantage = rewards + GAMMA * next_value_output - value_output
 
-    # actor_loss = - torch.mean(torch.log(action_probs[range(10), actions]) * advantage)
     critic_loss = torch.mean(advantage ** 2)
 
     policy_dist = torch.distributions.Categorical(action_probs)
     entropy = policy_dist.entropy()
 
-    actor_loss = - torch.mean(torch.log(action_probs[range(len(minibatch)), actions]) * advantage - ENTROPY_BETA * entropy)
+    actor_loss = - torch.mean(
+        torch.log(action_probs[range(len(minibatch)), actions]) * advantage - ENTROPY_BETA * entropy)
 
     actor_opt.zero_grad()
     actor_loss.backward(retain_graph=True)
@@ -82,7 +82,6 @@ def DispatchFunction(self, state, actor, ep, epsilon):
     action = torch.multinomial(action_probs, 1).item()
     if ep < EPSILON_EP and random.randrange(0, 10000) / 10000 < epsilon:
         action = random.randrange(0, 9)
-    # print(action)
     return action
 
 
@@ -92,8 +91,6 @@ class Actor(nn.Module):
         self.net = nn.Sequential(
             nn.Linear(input_size, HIDDEN_SIZE),
             nn.ReLU(),
-            # nn.Linear(HIDDEN_SIZE, HIDDEN_SIZE),
-            # nn.ReLU(),
             nn.Linear(HIDDEN_SIZE, output_size)
         )
 
@@ -107,8 +104,6 @@ class Critic(nn.Module):
         self.net = nn.Sequential(
             nn.Linear(input_size, HIDDEN_SIZE),
             nn.ReLU(),
-            # nn.Linear(HIDDEN_SIZE, HIDDEN_SIZE),
-            # nn.ReLU(),
             nn.Linear(HIDDEN_SIZE, output_size)
         )
 
@@ -116,7 +111,7 @@ class Critic(nn.Module):
         return self.net(x)
 
 
-def GetStateFunction(self,cluster):
+def GetStateFunction(self, cluster):
     DemandExpect = np.array(self.DemandExpect)
     DemandExpect = np.array(np.random.normal(DemandExpect, DemandExpect * 0.2) + 0.5, dtype=int)
     DemandExpect = np.maximum(DemandExpect, 0)
@@ -170,7 +165,6 @@ def train(self):
         self.RealExpTime = self.Orders[0].ReleasTime
         self.NowOrder = self.Orders[0]
 
-        # epsilon = EPSILON - episode * (EPSILON / EPSILON_EP)
         epsilon = 0
 
         total_reward = 0
@@ -209,7 +203,7 @@ def train(self):
                 temp_cluster = temp_vehicle.Cluster
                 if temp_vehicle not in idle_vehicles:
                     exp[4] = True
-                    exp[2]+=5
+                    exp[2] += 5
                 else:
                     temp_next_state = GetStateFunction(self, temp_cluster)
                     temp_next_state_v = torch.tensor(temp_next_state, dtype=torch.float32).to(device)
@@ -225,7 +219,6 @@ def train(self):
                 cluster_counter += 1
                 if cluster_counter % 9 == 0:
                     self.Refresh_Pre()
-
 
                 for vehicle in cluster.IdleVehicles:
 
@@ -298,7 +291,6 @@ def train(self):
                         new_state_v = torch.tensor(new_state, dtype=torch.float32).to(device)
 
                         minibatch.append([state_v, action_v, reward_v, new_state_v, done, self.Vehicles.index(vehicle)])
-
 
                 cluster.IdleVehicles.clear()
 
@@ -374,7 +366,7 @@ parser.add_argument("-n", "--name", default='A2C_test', help="Name of the run")
 args = parser.parse_args()
 device = torch.device("cuda:3" if args.cuda else "cpu")
 current_time = datetime.now().strftime('%b%d_%H-%M-%S')
-save_path = os.path.join("../","Models","Disp_A2C_NP", "_", "saves_episode", "VeRL0-" + args.name)
+save_path = os.path.join("../", "Models", "Disp_A2C_NP", "_", "saves_episode", "VeRL0-" + args.name)
 os.makedirs(save_path, exist_ok=True)
 
 EXPSIM = Simulation(

@@ -53,7 +53,6 @@ class DQN(nn.Module):
         )
 
     def forward(self, x):
-        # print(type(x))
         return self.net(x)
 
 
@@ -370,7 +369,7 @@ parser.add_argument("-n", "--name", default='test00', help="Name of the run")
 args = parser.parse_args()
 device = torch.device("cuda" if args.cuda else "cpu")
 current_time = datetime.now().strftime('%b%d_%H-%M-%S')
-save_path = os.path.join("../", 'COX', "_", "saves_episode", "VeRL0-" + args.name)  ###模型名称
+save_path = os.path.join("../", 'COX', "_", "saves_episode", "VeRL0-" + args.name)
 os.makedirs(save_path, exist_ok=True)
 
 EXPSIM = Simulation(

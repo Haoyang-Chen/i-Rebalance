@@ -1,10 +1,9 @@
 # -*-coding: utf-8 -*-
 # @Time : 2022/5/6 19:50 下午
 # @Author : Chen Haoyang   SEU
-# @File : RL_algo.py
+# @File : Disp_A2C_SP_RNP.py
 # @Software : PyCharm
 
-import sys
 import os
 
 # sys.path.append(os.path.dirname(sys.path[0]))
@@ -18,9 +17,7 @@ import torch.nn as nn
 import torch.nn.init as init
 import torch.optim as optim
 import torch.nn.functional as F
-import torch.nn.utils as nn_utils
 from tensorboardX import SummaryWriter
-from haversine import haversine
 
 import numpy as np
 import argparse
@@ -433,5 +430,4 @@ EXPSIM = Simulation(
     NeighborCanServer=NeighborCanServer,
     FocusOnLocalRegion=FocusOnLocalRegion,
 )
-# EXPSIM.CreateAllInstantiate()
 train(EXPSIM)

@@ -1,7 +1,7 @@
 # -*-coding: utf-8 -*-
 # @Time : 2022/5/6 19:50 下午
 # @Author : Chen Haoyang   SEU
-# @File : RL_algo.py
+# @File : Disp_A2C_SNP_RP.py
 # @Software : PyCharm
 
 import sys
@@ -58,13 +58,13 @@ def Disp_LearningFunction(self, minibatch, actor, critic, actor_opt, critic_opt,
     next_value_output = next_value_output.squeeze()
     advantage = rewards + GAMMA * next_value_output - value_output
 
-    # actor_loss = - torch.mean(torch.log(action_probs[range(10), actions]) * advantage)
     critic_loss = torch.mean(advantage ** 2)
 
     policy_dist = torch.distributions.Categorical(action_probs)
     entropy = policy_dist.entropy()
 
-    actor_loss = - torch.mean(torch.log(action_probs[range(len(minibatch)), actions]) * advantage - ENTROPY_BETA * entropy)
+    actor_loss = - torch.mean(
+        torch.log(action_probs[range(len(minibatch)), actions]) * advantage - ENTROPY_BETA * entropy)
 
     actor_opt.zero_grad()
     actor_loss.backward(retain_graph=True)
@@ -391,10 +391,10 @@ def train(self):
 
         writer.add_scalar("Number of Reject: ", self.RejectNum, episode)
         print('Number of Stay; ' + str(self.StayNum))
-        print('Dispatch Cost:',self.TotallyDispatchCost)
+        print('Dispatch Cost:', self.TotallyDispatchCost)
 
         writer.add_scalar("Number of Dispatch: ", self.DispatchNum - self.StayNum, episode)
-        writer.add_scalar("Dispatch Cost:",self.TotallyDispatchCost,episode)
+        writer.add_scalar("Dispatch Cost:", self.TotallyDispatchCost, episode)
         writer.add_scalar("Average Dispatch Cost: ", self.TotallyDispatchCost / self.DispatchNum, episode)
         writer.add_scalar("Average wait time: ", self.TotallyWaitTime / (len(self.Orders) - self.RejectNum), episode)
 
@@ -414,8 +414,8 @@ parser.add_argument("-n", "--name", default='A2C_test', help="Name of the run")
 args = parser.parse_args()
 device = torch.device("cuda:3" if args.cuda else "cpu")
 current_time = datetime.now().strftime('%b%d_%H-%M-%S')
-seq_save_path = os.path.join("../","Models","A2C_pre_nsr", "_", "saves_episode", "Seq-" + args.name)
-disp_save_path = os.path.join("../","Models","A2C_pre_snp_rp", "_", "saves_episode", "Disp-" + args.name)
+seq_save_path = os.path.join("../", "Models", "A2C_pre_nsr", "_", "saves_episode", "Seq-" + args.name)
+disp_save_path = os.path.join("../", "Models", "A2C_pre_snp_rp", "_", "saves_episode", "Disp-" + args.name)
 os.makedirs(seq_save_path, exist_ok=True)
 os.makedirs(disp_save_path, exist_ok=True)
 
@@ -431,5 +431,4 @@ EXPSIM = Simulation(
     NeighborCanServer=NeighborCanServer,
     FocusOnLocalRegion=FocusOnLocalRegion,
 )
-# EXPSIM.CreateAllInstantiate()
 train(EXPSIM)
