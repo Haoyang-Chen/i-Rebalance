@@ -4,7 +4,6 @@
 # @File : RL_algo.py
 # @Software : PyCharm
 
-import sys
 import os
 
 # sys.path.append(os.path.dirname(sys.path[0]))
@@ -16,11 +15,7 @@ from simulator.simulator import *
 import torch
 import torch.nn as nn
 import torch.nn.init as init
-import torch.optim as optim
 import torch.nn.functional as F
-import torch.nn.utils as nn_utils
-from tensorboardX import SummaryWriter
-from haversine import haversine
 
 import numpy as np
 import argparse
@@ -375,7 +370,6 @@ device = torch.device("cuda:2" if args.cuda else "cpu")
 current_time = datetime.now().strftime('%b%d_%H-%M-%S')
 save_path = os.path.join("../","Models","A2C_pre_nsr", "_", "saves_episode", "Seq-" + args.name)
 save_path2 = os.path.join("../","Models","A2C_pre_snp_rp", "_", "saves_episode", "Disp-" + args.name)
-# os.makedirs(save_path, exist_ok=True)
 
 EPS = 6 * 10
 

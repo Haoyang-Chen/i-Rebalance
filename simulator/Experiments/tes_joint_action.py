@@ -4,7 +4,6 @@
 # @File : RL_algo.py
 # @Software : PyCharm
 
-import sys
 import os
 
 # sys.path.append(os.path.dirname(sys.path[0]))
@@ -15,12 +14,7 @@ from simulator.simulator import *
 
 import torch
 import torch.nn as nn
-import torch.nn.init as init
-import torch.optim as optim
 import torch.nn.functional as F
-import torch.nn.utils as nn_utils
-from tensorboardX import SummaryWriter
-from haversine import haversine
 
 import numpy as np
 import argparse
@@ -90,9 +84,7 @@ def GetStateFunction(self, cluster, pre_idxs_batch):
         state[idx * 2 + 1] = int(self.SupplyExpect[id] + len(nc.IdleVehicles))
         state[idx * 2 + 2] = int(DemandExpect[id])
     pre_part = []
-    # print(pre_idxs_batch)
     for pre_idx in pre_idxs_batch:
-        # print(pre_idx)
         pre_part += list(pre_idx)
     pre_part = np.array(pre_part)
     state = np.concatenate([state, pre_part], axis=0)
@@ -317,7 +309,6 @@ device = torch.device("cuda:2" if args.cuda else "cpu")
 current_time = datetime.now().strftime('%b%d_%H-%M-%S')
 save_path = os.path.join("../","Models","A2C_pre_nsr", "_", "saves_episode", "Seq-" + args.name)
 save_path2 = os.path.join("../","Models","A2C_joint_diff_7", "_", "saves_episode", "VeRL0-" + args.name)
-# os.makedirs(save_path, exist_ok=True)
 
 EPS = 6 * 10
 
@@ -358,7 +349,6 @@ for i in range(EPS):
     TEST(EXPSIM, TOV, reject_rate, avg_wait, pre_reject, num_disp, i, reject_rate_h, idle_taxi_h,
          order_num_h, reward_h, num_pre_reject, AOV, disp_cost, incentives)
 
-# print(AOV)
 num_pre_reject = num_pre_reject.sum(0)
 num_pre_reject /= EPS
 num_pre_reject = [int(x) for x in num_pre_reject]
@@ -373,7 +363,6 @@ TOV_ = [[round(
     range(18)] for i in range(EPS)]
 print(TOV_)
 
-# print([T.sum() for T in TOV_])
 
 TOV = TOV.sum(0)
 reject_rate_h = reject_rate_h.sum(0)
@@ -399,7 +388,6 @@ order_num_h = order_num_h.sum(0)
 order_num_h /= EPS
 order_num_h = [int(x) for x in order_num_h]
 
-# print(reward_h)
 reward_h = reward_h.sum(0)
 reward_h /= EPS
 reward_h = [(reward_h[6 * x] + reward_h[6 * x + 1] + reward_h[6 * x + 2] + reward_h[6 * x + 3] + reward_h[6 * x + 4] +

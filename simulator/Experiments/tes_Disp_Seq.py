@@ -4,12 +4,7 @@
 # @File : RL_algo.py
 # @Software : PyCharm
 
-import sys
 import os
-
-# sys.path.append(os.path.dirname(sys.path[0]))
-# print(os.path.dirname(sys.path[0]))
-# sys.path.append(os.path.dirname(os.path.dirname(sys.path[0])))
 
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 
@@ -18,11 +13,7 @@ from simulator.simulator import *
 import torch
 import torch.nn as nn
 import torch.nn.init as init
-import torch.optim as optim
 import torch.nn.functional as F
-import torch.nn.utils as nn_utils
-from tensorboardX import SummaryWriter
-from haversine import haversine
 
 import numpy as np
 import argparse
@@ -144,10 +135,10 @@ def TEST(self, a, reject_rate, avg_wait, pre_reject, num_disp, idxx, reject_rate
          order_num_h, reward_h, num_pre_reject, AOV, disp_cost, incentives):
     disp_actor = Disp_Actor().to(device)
     seq_actor = Seq_Actor().to(device)
-    disp_actor_name = 'episode_9930actor7'#9985
+    disp_actor_name = 'episode_9985actor7'
     disp_actor_path = os.path.join(save_path2, disp_actor_name)
     disp_actor.load_state_dict(torch.load(disp_actor_path, map_location=torch.device('cpu')))
-    seq_actor_name = 'episode_9930actor7'
+    seq_actor_name = 'episode_9985actor7'
     seq_actor_path = os.path.join(save_path, seq_actor_name)
     seq_actor.load_state_dict(torch.load(seq_actor_path, map_location=torch.device('cpu')))
     seq = [31, 40, 21, 22, 23, 30, 32, 39, 41, 48, 49, 50, 11, 12, 13, 14, 15, 20, 24, 29, 33, 38, 42, 47, 51, 56, 57,
@@ -336,7 +327,6 @@ device = torch.device("cuda:2" if args.cuda else "cpu")
 current_time = datetime.now().strftime('%b%d_%H-%M-%S')
 save_path = os.path.join("../","Models","A2C_pre_nsr", "_", "saves_episode", "Seq-" + args.name)
 save_path2 = os.path.join("../","Models","A2C_pre_nsr", "_", "saves_episode", "Disp-" + args.name)
-# os.makedirs(save_path, exist_ok=True)
 
 EPS = 6 * 10
 
@@ -377,7 +367,6 @@ for i in range(EPS):
     TEST(EXPSIM, TOV, reject_rate, avg_wait, pre_reject, num_disp, i, reject_rate_h, idle_taxi_h,
          order_num_h, reward_h, num_pre_reject, AOV, disp_cost, incentives)
 
-# print(AOV)
 num_pre_reject = num_pre_reject.sum(0)
 num_pre_reject /= EPS
 num_pre_reject = [int(x) for x in num_pre_reject]
@@ -392,7 +381,6 @@ TOV_ = [[round(
     range(18)] for i in range(EPS)]
 print(TOV_)
 
-# print([T.sum() for T in TOV_])
 
 TOV = TOV.sum(0)
 reject_rate_h = reject_rate_h.sum(0)
@@ -418,7 +406,6 @@ order_num_h = order_num_h.sum(0)
 order_num_h /= EPS
 order_num_h = [int(x) for x in order_num_h]
 
-# print(reward_h)
 reward_h = reward_h.sum(0)
 reward_h /= EPS
 reward_h = [(reward_h[6 * x] + reward_h[6 * x + 1] + reward_h[6 * x + 2] + reward_h[6 * x + 3] + reward_h[6 * x + 4] +

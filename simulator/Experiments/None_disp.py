@@ -8,13 +8,9 @@ import os
 
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 
-import argparse
-import torch.nn as nn
-import torch
 import seaborn as sns
 from simulator.simulator import *
 from tensorboardX import SummaryWriter
-import matplotlib.pyplot as plot
 
 PLOT = False
 
@@ -22,25 +18,17 @@ PLOT = False
 def TEST(self, a, reject_rate, avg_wait, idxx):
     self.Reset()
     EpisodeStartTime = dt.datetime.now()
-    self.RealExpTime = self.Orders[0].ReleasTime  # - self.TimePeriods
+    self.RealExpTime = self.Orders[0].ReleasTime
     self.NowOrder = self.Orders[0]
 
-    EndTime = self.Orders[-1].ReleasTime  # + 3 * self.TimePeriods
+    EndTime = self.Orders[-1].ReleasTime
 
     sum = 0
     step = 0
 
     while self.RealExpTime <= EndTime:
-
-        # print("step: ", step)
-        # print("time: ", self.RealExpTime)
-        # print(self.RealExpTime)
-
         SOV = 0
-
         self.UpdateFunction()
-        # for cluster in self.Clusters:
-        #     print(len(cluster.IdleVehicles))
         vehicles = []
         for cluster in self.Clusters:
             for v in cluster.IdleVehicles:
@@ -61,11 +49,6 @@ def TEST(self, a, reject_rate, avg_wait, idxx):
         self.MatchFunction()
         if PLOT:
             demand_dest = np.zeros((self.NumGrideHeight, self.NumGrideWidth), dtype=int)
-            # supply_mat = np.zeros((self.NumGrideHeight, self.NumGrideWidth), dtype=int)
-            # for cluster in self.Clusters:
-            #     supply_mat[int(cluster.ID / self.NumGrideWidth)][cluster.ID % self.NumGrideWidth] = int(
-            #         len(cluster.IdleVehicles))
-            #     cluster.IdleVehicles.clear()
             for order in self.Orders:
                 if self.RealExpTime - self.TimePeriods < order.ReleasTime < self.RealExpTime:
                     c_id = self.NodeID2Cluseter[order.DeliveryPoint].ID
@@ -83,8 +66,6 @@ def TEST(self, a, reject_rate, avg_wait, idxx):
             if self.RealExpTime - self.TimePeriods < i.ReleasTime < self.RealExpTime:
                 if i.ArriveInfo != "Reject":
                     SOV += self.GetValue(i.OrderValue)
-
-        # writer_non.add_scalar('Order_Value', 2*SOV, step)
         a[idxx][step] += SOV
         step += 1
 

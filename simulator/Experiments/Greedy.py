@@ -7,17 +7,11 @@
 
 import os
 
-import numpy as np
-
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 
 import argparse
-import torch.nn as nn
-import torch
 from simulator.simulator import *
 import seaborn as sns
-from tensorboardX import SummaryWriter
-from haversine import haversine
 from sklearn.preprocessing import minmax_scale
 
 PLOT = False
@@ -26,29 +20,6 @@ DISPATCH = True
 KAPPA = 8
 
 DM = 'survey'
-
-
-def get_pre_old(self, vehicle):  # 司机
-
-    driver_id = vehicle.ID
-    cluster_id = vehicle.Cluster.ID
-    origin_id = cluster_id
-    center_id = self.DriverClusteringInst[driver_id]
-    center_info = self.DriverClusteringData[int(center_id)]
-
-    outcome = [0] * 9
-    outcome[4] = center_info[self.NumGrideHeight - 1 - int(cluster_id / self.NumGrideWidth)][
-        int(cluster_id % self.NumGrideWidth)]
-
-    C2ADict = {0: 4, -1: 5, 1: 3, 9: 7, -9: 1, 10: 6, 8: 8, -8: 0, -10: 2}
-
-    for c in vehicle.Cluster.Neighbor:
-        cluster_id = c.ID
-        index = C2ADict[origin_id - cluster_id]
-        outcome[index] = center_info[self.NumGrideHeight - 1 - int(cluster_id / self.NumGrideWidth)][
-            int(cluster_id % self.NumGrideWidth)]
-
-    return outcome
 
 
 def TEST(self, rand, pre, a, reject_rate, avg_wait, pre_reject, num_disp, idxx, reject_rate_h, idle_taxi_h,
@@ -123,15 +94,10 @@ def TEST(self, rand, pre, a, reject_rate, avg_wait, pre_reject, num_disp, idxx, 
                 for vehicle in cluster.IdleVehicles:
                     idle_taxi_h[idxx][step] += 1
 
-                    # pre_idxs = [0, 0, 0, 0, 0, 0, 0, 0, 0]
                     if pre:
-                        if NEW_PRE:
-                            PreList = self.PreList[vehicle.ID]
-                            pre_idxs = [PreList[5], PreList[6], PreList[7], PreList[4], PreList[8], PreList[0],
-                                        PreList[3], PreList[2], PreList[1]]
-                        else:
-                            pre_idxs = get_pre_old(self, vehicle)
-                        # pre_idxs = [round(x, 3) for x in pre_idxs]
+                        PreList = self.PreList[vehicle.ID]
+                        pre_idxs = [PreList[5], PreList[6], PreList[7], PreList[4], PreList[8], PreList[0],
+                                    PreList[3], PreList[2], PreList[1]]
                         pre_idxs = np.array(pre_idxs)
 
                         idxs = pre_idxs.argsort()
@@ -150,10 +116,6 @@ def TEST(self, rand, pre, a, reject_rate, avg_wait, pre_reject, num_disp, idxx, 
                     for nc in neighbours:
                         demand.append(len(nc.Orders))
                         supply.append(len(nc.IdleVehicles))
-
-                    # for nc in neighbours:
-                    #     demand.append(self.DemandExpect[nc.ID])
-                    #     supply.append(self.Supply_obs[nc.ID])
 
                     diff = [demand[i] - supply[i] for i in range(len(demand))]
                     avg_diff = sum(diff) / len(diff)
@@ -179,7 +141,6 @@ def TEST(self, rand, pre, a, reject_rate, avg_wait, pre_reject, num_disp, idxx, 
                             if random.randrange(0, 10000) / 10000 > pre_idxs[
                                 self.Getidx(cluster.ID, vehicle.Cluster.ID)]:
                                 reject += 1
-                                # print(pre_idxs)
                                 temp = sorted(pre_idxs)
                                 temp = temp[::-1]
                                 for i in range(9):
@@ -215,17 +176,13 @@ def TEST(self, rand, pre, a, reject_rate, avg_wait, pre_reject, num_disp, idxx, 
 
                             result = -0.3892 * ranking + 0.2932 * expected_income - 1.3959 + 1.8379 * vehicle.Obey
 
-                            exist = True
                             vehicle.Auto = False
                             if result < 0:
                                 incentive += (0 - result) / 0.2932
-                                exist = False
                                 vehicle.Auto = True
-                                # idxs = idxs[0:int(len(idxs) / 2):1]
                                 reject += 1
                                 np.random.shuffle(idxs)
                                 vehicle.Cluster = self.Act2Cluster(idxs[0], cluster)
-                                # print(self.DemandExpect[vehicle.Cluster.ID] - self.SupplyExpect[vehicle.Cluster.ID])
                                 if (self.DemandExpect[vehicle.Cluster.ID] - self.SupplyExpect[vehicle.Cluster.ID]) <= 0:
                                     negative += 1
                                 else:
@@ -346,8 +303,6 @@ parser.add_argument("--cuda", default=False, action="store_true", help="Enable c
 parser.add_argument("-n", "--name", default='test00', help="Name of the run")
 args = parser.parse_args()
 device = torch.device("cuda" if args.cuda else "cpu")
-# save_path = os.path.join("Models","Greedy", "_", "saves_episode", "VeRL0-" + args.name)
-# writer_pre_rand = SummaryWriter('cc/Greedy_司机有偏好/')
 
 EPS = 6 * 10
 

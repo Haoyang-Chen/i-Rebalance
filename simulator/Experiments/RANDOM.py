@@ -6,16 +6,10 @@
 
 import os
 
-import numpy as np
-
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 
 import argparse
-import torch.nn as nn
-import torch
 from simulator.simulator import *
-from tensorboardX import SummaryWriter
-from haversine import haversine
 from sklearn.preprocessing import minmax_scale
 
 PLOT = False
@@ -23,7 +17,8 @@ DISPATCH = True
 
 KAPPA = 8
 
-DM='survey'
+DM = 'survey'
+
 
 def GetStateFunction(self, vehicle_id, cluster, pre_idxs):
     """
@@ -45,7 +40,7 @@ def GetStateFunction(self, vehicle_id, cluster, pre_idxs):
         state.append(int(self.SupplyExpect[neighbour.ID]))
         state.append(int(self.DemandExpect[neighbour.ID]))
 
-        state.append(pre_idxs[Getidx(cluster.ID, neighbour.ID)])
+        state.append(pre_idxs[self.Getidx(cluster.ID, neighbour.ID)])
 
     while len(state) < (KAPPA + 1) * 3 + 1:
         state.append(0)
@@ -54,115 +49,6 @@ def GetStateFunction(self, vehicle_id, cluster, pre_idxs):
         state = state[:(KAPPA + 1) * 3 + 1]
 
     return state
-
-
-def Act2Cluster(self, action, cluster):
-    """
-    return a cluster given an action(0-8) and current cluster
-    """
-    rand_cluster = cluster.Neighbor[random.randrange(0, len(cluster.Neighbor))]
-    try:
-        if action <= 2:
-            dest = self.Clusters[cluster.ID + self.NumGrideWidth - 1 + action]
-        elif 2 < action <= 5:
-            dest = self.Clusters[cluster.ID - 4 + action]
-        elif 5 < action <= 8:
-            dest = self.Clusters[cluster.ID - self.NumGrideWidth - 7 + action]
-        else:
-            raise 'wrong action'
-    except:
-        dest = rand_cluster
-
-    if cluster.ID < self.NumGrideWidth and 5 < action <= 8:
-        dest = rand_cluster
-    if cluster.ID >= self.NumGrideWidth * (self.NumGrideHeight - 1) and action <= 2:
-        dest = rand_cluster
-    if cluster.ID % self.NumGrideWidth == 0 and action % 3 == 0:
-        dest = rand_cluster
-    if cluster.ID % self.NumGrideWidth == self.NumGrideWidth - 1 and action % 3 == 2:
-        dest = rand_cluster
-
-    return dest
-
-
-def RewardFunction_NEW2(self, state, vehicle_id, cluster, pre_idxs):
-    """Supply-demand"""
-    i = 1
-    Omega = 0
-    Omega_ = 0
-    cluster_state = GetStateFunction(self, vehicle_id, cluster, pre_idxs)
-    preference = 0
-    while i < len(state):
-        if state[i] != cluster_state[i]:
-            preference = state[i + 2]
-        Omega += abs(state[i] - state[i + 1])
-        Omega_ += abs(cluster_state[i] - cluster_state[i + 1])
-        i += 3
-    return Omega - Omega_ + preference
-
-
-def get_pre_old(self, vehicle):  # 司机
-
-    driver_id = vehicle.ID
-    cluster_id = vehicle.Cluster.ID
-    origin_id = cluster_id
-    center_id = self.DriverClusteringInst[driver_id]
-    # center_id = random.randrange(0,10)
-    center_info = self.DriverClusteringData[int(center_id)]
-
-    outcome = [0] * 9
-    outcome[4] = center_info[self.NumGrideHeight - 1 - int(cluster_id / self.NumGrideWidth)][
-        int(cluster_id % self.NumGrideWidth)]
-
-    C2ADict = {0: 4, -1: 5, 1: 3, 9: 7, -9: 1, 10: 6, 8: 8, -8: 0, -10: 2}
-
-    for c in vehicle.Cluster.Neighbor:
-        cluster_id = c.ID
-        index = C2ADict[origin_id - cluster_id]
-        outcome[index] = center_info[self.NumGrideHeight - 1 - int(cluster_id / self.NumGrideWidth)][
-        int(cluster_id % self.NumGrideWidth)]
-
-    return outcome
-
-
-def Getidx(Cluster_ID, Goal_ID):
-    index = Cluster_ID - Goal_ID
-    if abs(index) > 10:
-        return 4
-    C2ADict = {0: 4, -1: 5, 1: 3, 9: 7, -9: 1, 10: 6, 8: 8, -8: 0, -10: 2}
-
-    return C2ADict[index]
-
-
-def DemandPredictFunction(self):
-    """
-    Here you can implement your own order forecasting method
-    to provide efficient and accurate help for Dispatch method
-    传当前time slot内对应的订单数量
-    """
-    self.DemandExpect = torch.zeros(self.ClustersNumber)
-    DE = torch.zeros(self.ClustersNumber)
-    for order in self.Orders:
-        if self.RealExpTime + self.TimePeriods <= order.ReleasTime < self.RealExpTime + 2 * self.TimePeriods:
-            self.DemandExpect[self.NodeID2Cluseter[order.PickupPoint].ID] += 1
-            cluster = self.NodeID2Cluseter[order.PickupPoint]
-            rodedist = self.RoadDistance(order.PickupPoint, order.DeliveryPoint)
-            value = self.GetValue(rodedist)
-            cluster.potential += value
-
-        if self.RealExpTime <= order.ReleasTime <= self.RealExpTime + self.TimePeriods:
-            DE[self.NodeID2Cluseter[order.PickupPoint].ID] += 1
-
-    self.DE_mat = DE.reshape((1, 1, self.NumGrideHeight, self.NumGrideWidth))
-    trans = torch.nn.Conv2d(1, 1, (5, 5), stride=1, padding=2, bias=False)
-    trans.weight.data = torch.Tensor([[[[1, 1, 1, 1, 1],
-                                        [1, 1, 1, 1, 1],
-                                        [1, 1, 1, 1, 1],
-                                        [1, 1, 1, 1, 1],
-                                        [1, 1, 1, 1, 1]]]])
-    self.DE_mat = trans(self.DE_mat)
-    self.DE_mat = self.DE_mat.view(-1, self.DE_mat.shape[2] * self.DE_mat.shape[3]).squeeze()
-    return self.DE_mat
 
 
 def move(self, vehicle, action, cluster, pre_idxs, idxs):
@@ -216,14 +102,10 @@ def TEST(self, rand, pre, a, reject_rate, avg_wait, pre_reject, num_disp, idxx, 
     self.RealExpTime = self.Orders[0].ReleasTime
     self.NowOrder = self.Orders[0]
 
-    total_reward = 0
-    self.NowOrder = self.Orders[0]
-
     EndTime = self.Orders[-1].ReleasTime
 
-
     step = 0
-    incentive=0
+    incentive = 0
     while self.RealExpTime <= EndTime:
 
         SOV = 0
@@ -249,12 +131,9 @@ def TEST(self, rand, pre, a, reject_rate, avg_wait, pre_reject, num_disp, idxx, 
 
                     if pre:
                         NeighborClusters = cluster.Neighbor
-                        if NEW_PRE:
-                            PreList = self.PreList[vehicle.ID]
-                            pre_idxs = [PreList[5], PreList[6], PreList[7], PreList[4], PreList[8], PreList[0],
-                                        PreList[3], PreList[2], PreList[1]]
-                        else:
-                            pre_idxs = get_pre_old(self, vehicle)
+                        PreList = self.PreList[vehicle.ID]
+                        pre_idxs = [PreList[5], PreList[6], PreList[7], PreList[4], PreList[8], PreList[0],
+                                    PreList[3], PreList[2], PreList[1]]
                         pre_idxs = np.array(pre_idxs)
 
                         idxs = pre_idxs.argsort()
@@ -275,14 +154,9 @@ def TEST(self, rand, pre, a, reject_rate, avg_wait, pre_reject, num_disp, idxx, 
                     if ince != 0:
                         incentive += ince
                         pre_rej_count += 1
-                    reward = RewardFunction_NEW2(self, state, vehicle.ID, cluster, pre_idxs)
 
                     if vehicle.Cluster == cluster:
                         self.StayNum += 1
-
-                    total_reward += reward
-                    step_reward += reward
-                    reward_h[idxx][step] += reward
 
                 cluster.IdleVehicles.clear()
 
@@ -313,16 +187,12 @@ def TEST(self, rand, pre, a, reject_rate, avg_wait, pre_reject, num_disp, idxx, 
 
     print("Total Order value: " + str(SumOrderValue))
     print('Auto Order Value: ' + str(self.AutoOrderValue))
-    print('Dispatch Value: ' + str(SumOrderValue-self.AutoOrderValue))
+    print('Dispatch Value: ' + str(SumOrderValue - self.AutoOrderValue))
     AOV[idxx] += SumOrderValue - self.AutoOrderValue
     print('Incentive: ', incentive)
     incentives[idxx] += incentive
     print("----------------------------Experiment over----------------------------")
     if DISPATCH:
-        print('Total reward: ', total_reward)
-        avg_reward = total_reward / self.DispatchNum
-        self.AVGreward = avg_reward
-        print('Average reward: ', avg_reward)
         print('preference reject rate: ', self.reject / self.DispatchNum)
         pre_reject[idxx] = self.reject / self.DispatchNum
 
@@ -346,6 +216,7 @@ def TEST(self, rand, pre, a, reject_rate, avg_wait, pre_reject, num_disp, idxx, 
     print("Total Order value: " + str(SumOrderValue))
     return
 
+
 DispatchMode = "Simulation"
 DemandPredictionMode = "None"
 ClusterMode = "Grid"
@@ -355,7 +226,7 @@ parser.add_argument("--cuda", default=False, action="store_true", help="Enable c
 args = parser.parse_args()
 device = torch.device("cuda" if args.cuda else "cpu")
 
-EPS = 6*10
+EPS = 6 * 10
 
 TOV = np.zeros((EPS, 108))
 AOV = np.zeros(EPS)
@@ -391,13 +262,12 @@ for i in range(EPS):
         FocusOnLocalRegion=FocusOnLocalRegion,
     )
 
-    rand=False
-    pre=True
+    rand = False
+    pre = True
 
-    TEST(EXPSIM,rand,pre, TOV, reject_rate, avg_wait, pre_reject, num_disp, i, reject_rate_h, idle_taxi_h,
+    TEST(EXPSIM, rand, pre, TOV, reject_rate, avg_wait, pre_reject, num_disp, i, reject_rate_h, idle_taxi_h,
          order_num_h, reward_h, num_pre_reject, AOV, disp_cost, incentives)
 
-# print(AOV)
 num_pre_reject = num_pre_reject.sum(0)
 num_pre_reject /= EPS
 num_pre_reject = [int(x) for x in num_pre_reject]
@@ -411,8 +281,6 @@ TOV_ = [[round(
     for x in
     range(18)] for i in range(EPS)]
 print(TOV_)
-
-# print([T.sum() for T in TOV_])
 
 TOV = TOV.sum(0)
 reject_rate_h = reject_rate_h.sum(0)
@@ -438,7 +306,6 @@ order_num_h = order_num_h.sum(0)
 order_num_h /= EPS
 order_num_h = [int(x) for x in order_num_h]
 
-# print(reward_h)
 reward_h = reward_h.sum(0)
 reward_h /= EPS
 reward_h = [(reward_h[6 * x] + reward_h[6 * x + 1] + reward_h[6 * x + 2] + reward_h[6 * x + 3] + reward_h[6 * x + 4] +

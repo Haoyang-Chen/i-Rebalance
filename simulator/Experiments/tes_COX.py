@@ -29,7 +29,8 @@ GAMMA = 0.95
 EPSILON = 0.3
 EPSILON_EP = 1
 
-DM='survey'
+DM = 'survey'
+
 
 class DQN(nn.Module):
     def __init__(self, input_size=(KAPPA + 1) * 2 + 1, output_size=9):
@@ -71,20 +72,11 @@ def DispatchFunction(self, state, net, ep, epsilon):
     """
     self.DispatchNum += 1
     state_v = torch.tensor(state, dtype=torch.float32).to(device)
-    # print('state_v:', state_v)
     output = net(state_v.unsqueeze(dim=0)).reshape(1, KAPPA + 1)
-    # print('output:', output)
     idx = torch.max(output, 1)[1].cpu().numpy()
-    # print(type(idx))
-    # print(idx)
-    # print('idx:', int(idx))
 
     if ep < EPSILON_EP and random.randrange(0, 10000) / 10000 < epsilon:
         idx = random.randrange(0, 9)
-
-    # if int(idx) == 4:
-    #     self.StayNum += 1
-
     return int(idx)
 
 
@@ -111,7 +103,7 @@ def TEST(self, rand, pre, a, reject_rate, avg_wait, pre_reject, num_disp, idxx, 
     name = 'best_+380400.370_10.dat'
     fname = os.path.join(save_path, name)
     Q_net = DQN().to(device)
-    Q_net.load_state_dict(torch.load(fname,map_location='cpu'))
+    Q_net.load_state_dict(torch.load(fname, map_location='cpu'))
     self.CreateAllInstantiate_TEST(idxx // int(EPS / 6))
     self.Reset()
     EpisodeStartTime = dt.datetime.now()
@@ -122,14 +114,14 @@ def TEST(self, rand, pre, a, reject_rate, avg_wait, pre_reject, num_disp, idxx, 
 
     EndTime = self.Orders[-1].ReleasTime
 
-    step=0
+    step = 0
     reject = 0
     positive = 0
     negative = 0
 
     incentive = 0
     while self.RealExpTime <= EndTime:
-        SOV=0
+        SOV = 0
         self.UpdateFunction()
         self.MatchFunction()
         ##############################################
@@ -183,25 +175,19 @@ def TEST(self, rand, pre, a, reject_rate, avg_wait, pre_reject, num_disp, idxx, 
                     if pre:
                         PreList = self.PreList[vehicle.ID]
                         pre_idxs = [PreList[5], PreList[6], PreList[7], PreList[4], PreList[8], PreList[0],
-                               PreList[3], PreList[2], PreList[1]]
-                        # pre_idxs = [round(x, 3) for x in pre_idxs]
+                                    PreList[3], PreList[2], PreList[1]]
                         pre_idxs = np.array(pre_idxs)
 
                         idxs = pre_idxs.argsort()
-                        s=0
+                        s = 0
                         for i in idxs:
-                            pre_idxs[i]=s
-                            s+=1
+                            pre_idxs[i] = s
+                            s += 1
 
                         idxs = idxs[::-1]
-                        # print('raw_pre: ',pre_idxs)
-                        pre_idxs = minmax_scale(pre_idxs, (0,1))
-
-                        # print('pre_idxs: ',pre_idxs)
-                        # print('action rank: ',idxs)
+                        pre_idxs = minmax_scale(pre_idxs, (0, 1))
 
                     state = GetStateFunction2(self, vehicle.ID, cluster, pre_idxs)
-                    # print('state:', state)
 
                     if rand:
                         action = DispatchFunction(self, state, Q_net, 0, 1)
@@ -212,9 +198,9 @@ def TEST(self, rand, pre, a, reject_rate, avg_wait, pre_reject, num_disp, idxx, 
 
                     if pre:
                         if DM == 'sample':
-                            if random.randrange(0, 10000) / 10000 > pre_idxs[self.Getidx(cluster.ID, vehicle.Cluster.ID)]:
+                            if random.randrange(0, 10000) / 10000 > pre_idxs[
+                                self.Getidx(cluster.ID, vehicle.Cluster.ID)]:
                                 reject += 1
-                                # print(pre_idxs)
                                 temp = sorted(pre_idxs)
                                 temp = temp[::-1]
                                 for i in range(9):
@@ -250,14 +236,13 @@ def TEST(self, rand, pre, a, reject_rate, avg_wait, pre_reject, num_disp, idxx, 
 
                             result = -0.3892 * ranking + 0.2932 * expected_income - 1.3959 + 1.8379 * vehicle.Obey
                             exist = True
-                            vehicle.Auto=False
+                            vehicle.Auto = False
                             if result < 0:
                                 exist = False
-                                vehicle.Auto=True
+                                vehicle.Auto = True
                                 incentive += (0 - result) / 0.2932
                                 idxs = idxs[0:int(len(idxs) / 2):1]
                                 reject += 1
-                                # np.random.shuffle(idxs)
                                 vehicle.Cluster = self.Act2Cluster(idxs[0], cluster)
                                 if (self.DemandExpect[vehicle.Cluster.ID] - self.SupplyExpect[vehicle.Cluster.ID]) <= 0:
                                     negative += 1
@@ -266,7 +251,7 @@ def TEST(self, rand, pre, a, reject_rate, avg_wait, pre_reject, num_disp, idxx, 
 
                     if vehicle.Cluster == cluster:
                         self.StayExpect[cluster.ID] += 1
-                        self.StayNum+=1
+                        self.StayNum += 1
 
                     RandomNode = random.choice(vehicle.Cluster.Nodes)
                     RandomNode = RandomNode[0]
@@ -280,7 +265,7 @@ def TEST(self, rand, pre, a, reject_rate, avg_wait, pre_reject, num_disp, idxx, 
 
                     self.SupplyExpect[vehicle.Cluster.ID] += 1
 
-                    reward = RewardFunction(self, state, vehicle, cluster, pre_idxs,action,exist)
+                    reward = RewardFunction(self, state, vehicle, cluster, pre_idxs, action, exist)
 
                     total_reward += reward
                     step_reward += reward
@@ -339,13 +324,12 @@ def TEST(self, rand, pre, a, reject_rate, avg_wait, pre_reject, num_disp, idxx, 
         else:
             self.TotallyWaitTime += 20
 
-
     print("Total Order value: " + str(SumOrderValue))
     print('Auto Order Value: ' + str(self.AutoOrderValue))
     print("Average Dispatch Cost: " + str(self.TotallyDispatchCost / self.DispatchNum))
     print("Dispatch Cost: " + str(self.TotallyDispatchCost))
     disp_cost[idxx] += self.TotallyDispatchCost
-    AOV[idxx]+=SumOrderValue-self.AutoOrderValue
+    AOV[idxx] += SumOrderValue - self.AutoOrderValue
     print('Incentive: ', incentive)
     incentives[idxx] += incentive
     print("----------------------------Experiment over----------------------------")
@@ -386,8 +370,7 @@ parser.add_argument("--cuda", default=False, action="store_true", help="Enable c
 parser.add_argument("-n", "--name", default='test00', help="Name of the run")
 args = parser.parse_args()
 device = torch.device("cuda" if args.cuda else "cpu")
-save_path = os.path.join("../","Models","COX", "_", "saves_episode", "VeRL0-" + args.name)
-# print("save_path: ",save_path)
+save_path = os.path.join("../", "Models", "COX", "_", "saves_episode", "VeRL0-" + args.name)
 ##################################################################################
 
 EPS = 6 * 10
@@ -431,8 +414,6 @@ for i in range(EPS):
     TEST(EXPSIM, rand, pre, TOV, reject_rate, avg_wait, pre_reject, num_disp, i, reject_rate_h, idle_taxi_h,
          order_num_h, reward_h, num_pre_reject, AOV, disp_cost, incentives)
 
-
-# print(AOV)
 num_pre_reject = num_pre_reject.sum(0)
 num_pre_reject /= EPS
 num_pre_reject = [int(x) for x in num_pre_reject]
@@ -446,8 +427,6 @@ TOV_ = [[round(
     for x in
     range(18)] for i in range(EPS)]
 print(TOV_)
-
-# print([T.sum() for T in TOV_])
 
 TOV = TOV.sum(0)
 reject_rate_h = reject_rate_h.sum(0)
@@ -473,7 +452,6 @@ order_num_h = order_num_h.sum(0)
 order_num_h /= EPS
 order_num_h = [int(x) for x in order_num_h]
 
-# print(reward_h)
 reward_h = reward_h.sum(0)
 reward_h /= EPS
 reward_h = [(reward_h[6 * x] + reward_h[6 * x + 1] + reward_h[6 * x + 2] + reward_h[6 * x + 3] + reward_h[6 * x + 4] +

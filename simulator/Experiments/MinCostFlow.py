@@ -6,20 +6,12 @@
 
 
 import os
-import sys
-# sys.path.append(os.path.dirname(sys.path[0]))
-
-import numpy as np
 
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 
 import argparse
-import torch.nn as nn
-import torch
 from simulator.simulator import *
 import seaborn as sns
-from tensorboardX import SummaryWriter
-from haversine import haversine
 from sklearn.preprocessing import minmax_scale
 from ortools.graph.python import min_cost_flow
 
@@ -28,7 +20,7 @@ DISPATCH = True
 
 KAPPA = 8
 
-DM='survey'
+DM = 'survey'
 
 LAMBDA = 0.8
 GAMMA = -1.5
@@ -67,124 +59,6 @@ def Capacity(Can_Weights, A, i):
     W = Can_Weights[i]
     Sum_W = sum(Can_Weights)
     return W / Sum_W * A
-'''
-A is the number of vehicles
-'''
-
-
-
-def Act2Cluster(self, action, cluster):
-    """
-    return a cluster given an action(0-8) and current cluster
-    """
-    rand_cluster = cluster.Neighbor[random.randrange(0, len(cluster.Neighbor))]
-    try:
-        if action <= 2:
-            dest = self.Clusters[cluster.ID + self.NumGrideWidth - 1 + action]
-        elif 2 < action <= 5:
-            dest = self.Clusters[cluster.ID - 4 + action]
-        elif 5 < action <= 8:
-            dest = self.Clusters[cluster.ID - self.NumGrideWidth - 7 + action]
-        else:
-            raise 'wrong action'
-    except:
-        dest = rand_cluster
-
-    if cluster.ID < self.NumGrideWidth and 5 < action <= 8:
-        dest = rand_cluster
-    if cluster.ID >= self.NumGrideWidth * (self.NumGrideHeight - 1) and action <= 2:
-        dest = rand_cluster
-    if cluster.ID % self.NumGrideWidth == 0 and action % 3 == 0:
-        dest = rand_cluster
-    if cluster.ID % self.NumGrideWidth == self.NumGrideWidth - 1 and action % 3 == 2:
-        dest = rand_cluster
-
-    return dest
-
-
-def Getidx(Cluster_ID, Goal_ID):
-    index = Cluster_ID - Goal_ID
-    if abs(index) > 10:
-        return 4
-    C2ADict = {0: 4, -1: 5, 1: 3, 9: 7, -9: 1, 10: 6, 8: 8, -8: 0, -10: 2}
-
-    return C2ADict[index]
-
-
-
-def DemandPredictFunction(self):
-    """
-    Here you can implement your own order forecasting method
-    to provide efficient and accurate help for Dispatch method
-    传当前time slot内对应的订单数量
-    """
-    self.DemandExpect = torch.zeros(self.ClustersNumber)
-    DE = torch.zeros(self.ClustersNumber)
-    for order in self.Orders:
-        if self.RealExpTime + self.TimePeriods <= order.ReleasTime < self.RealExpTime + 2 * self.TimePeriods:
-            self.DemandExpect[self.NodeID2Cluseter[order.PickupPoint].ID] += 1
-            cluster = self.NodeID2Cluseter[order.PickupPoint]
-            rodedist = self.RoadDistance(order.PickupPoint, order.DeliveryPoint)
-            value = self.GetValue(rodedist)
-            cluster.potential += value
-
-        if self.RealExpTime <= order.ReleasTime <= self.RealExpTime + self.TimePeriods:
-            DE[self.NodeID2Cluseter[order.PickupPoint].ID] += 1
-
-    self.DE_mat = DE.reshape((1, 1, self.NumGrideHeight, self.NumGrideWidth))
-    trans = torch.nn.Conv2d(1, 1, (5, 5), stride=1, padding=2, bias=False)
-    trans.weight.data = torch.Tensor([[[[1, 1, 1, 1, 1],
-                                        [1, 1, 1, 1, 1],
-                                        [1, 1, 1, 1, 1],
-                                        [1, 1, 1, 1, 1],
-                                        [1, 1, 1, 1, 1]]]])
-    self.DE_mat = trans(self.DE_mat)
-    self.DE_mat = self.DE_mat.view(-1, self.DE_mat.shape[2] * self.DE_mat.shape[3]).squeeze()
-    return self.DE_mat
-
-
-def IdleTimeCounterFunction(self):
-    self.IdleTimeCounter = torch.zeros(self.ClustersNumber)
-    self.IdleCarsCounter = torch.zeros(self.ClustersNumber)
-    for cluster in self.Clusters:
-        for vehicle in cluster.IdleVehicles:
-            self.IdleCarsCounter[cluster.ID] += 1
-            self.IdleTimeCounter[cluster.ID] += vehicle.idle_start_time
-    self.ITC_mat = self.IdleTimeCounter.reshape((1, 1, self.NumGrideHeight, self.NumGrideWidth))
-    self.ICC_mat = self.IdleCarsCounter.reshape((1, 1, self.NumGrideHeight, self.NumGrideWidth))
-    # print(self.ICC_mat)
-    trans = torch.nn.Conv2d(1, 1, (5, 5), stride=1, padding=2, bias=False)
-    trans.weight.data = torch.Tensor([[[[1, 1, 1, 1, 1],
-                                        [1, 1, 1, 1, 1],
-                                        [1, 1, 1, 1, 1],
-                                        [1, 1, 1, 1, 1],
-                                        [1, 1, 1, 1, 1]]]])
-    self.ITC_mat = trans(self.ITC_mat)
-    self.ICC_mat = trans(self.ICC_mat)
-    # print(self.ICC_mat)
-    # print(self.ICC_mat.shape)
-    self.ITC_mat = self.ITC_mat.view(-1, self.ITC_mat.shape[2] * self.ITC_mat.shape[3]).squeeze()
-    self.ICC_mat = self.ICC_mat.view(-1, self.ICC_mat.shape[2] * self.ICC_mat.shape[3]).squeeze()
-    # print("ITC: ",self.ITC_mat)
-    # print("ICC: ",self.ICC_mat)
-    self.Waiting_Time = self.step - self.ITC_mat / (self.ICC_mat + 0.01)
-    return self.Waiting_Time
-
-
-def RewardFunction_NEW2(self, state, vehicle_id, cluster, pre_idxs):
-    """Supply-demand"""
-    i = 1
-    Omega = 0
-    Omega_ = 0
-    cluster_state = GetStateFunction(self, vehicle_id, cluster, pre_idxs)
-    preference = 0
-    while i < len(state):
-        if state[i] != cluster_state[i]:
-            preference = state[i + 2]
-        Omega += abs(state[i] - state[i + 1])
-        Omega_ += abs(cluster_state[i] - cluster_state[i + 1])
-        i += 3
-    return Omega - Omega_ + preference
 
 
 def GetStateFunction(self, vehicle_id, cluster, pre_idxs):
@@ -207,7 +81,7 @@ def GetStateFunction(self, vehicle_id, cluster, pre_idxs):
         state.append(self.StayExpect[neighbour.ID] + self.SupplyExpect[neighbour.ID])
         state.append(int(self.DemandExpect[neighbour.ID]))
 
-        state.append(pre_idxs[Getidx(cluster.ID, neighbour.ID)])
+        state.append(pre_idxs[self.Getidx(cluster.ID, neighbour.ID)])
 
     while len(state) < (KAPPA + 1) * 3 + 1:
         state.append(0)
@@ -226,8 +100,6 @@ def TEST(self, rand, pre, a, reject_rate, avg_wait, pre_reject, num_disp, idxx, 
     self.RealExpTime = self.Orders[0].ReleasTime
     self.NowOrder = self.Orders[0]
 
-    total_reward = 0
-    self.NowOrder = self.Orders[0]
 
     EndTime = self.Orders[-1].ReleasTime
 
@@ -235,7 +107,7 @@ def TEST(self, rand, pre, a, reject_rate, avg_wait, pre_reject, num_disp, idxx, 
     reject = 0
     positive = 0
     negative = 0
-    incentive=0
+    incentive = 0
 
     while self.RealExpTime <= EndTime:
         SOV = 0
@@ -278,91 +150,81 @@ def TEST(self, rand, pre, a, reject_rate, avg_wait, pre_reject, num_disp, idxx, 
 
         if DISPATCH:
 
-            step_reward = 0
-            clusters_list=[]
-            end_nodes=[]
-            start_nodes=[]
+            clusters_list = []
+            end_nodes = []
+            start_nodes = []
 
-            # 求解Min-cost-flow问题
             for cluster in self.Clusters:
-                if len(cluster.Orders)-len(cluster.IdleVehicles)<0:
+                if len(cluster.Orders) - len(cluster.IdleVehicles) < 0:
                     clusters_list.append(cluster.ID)
-            #print('cluster_list',clusters_list,len(clusters_list))
             for i in clusters_list:
                 for j in range(len(self.Clusters[i].Neighbor)):
-                    if len(self.Clusters[i].Neighbor[j].Orders)-len(self.Clusters[i].Neighbor[j].IdleVehicles)>0:
+                    if len(self.Clusters[i].Neighbor[j].Orders) - len(self.Clusters[i].Neighbor[j].IdleVehicles) > 0:
                         end_nodes.append(self.Clusters[i].Neighbor[j].ID)
                         start_nodes.append(i)
-            num_start=len(list(set(start_nodes)))
-            start_nodes_new=[72]*num_start+start_nodes+list(set(end_nodes))
-            end_nodes_new=list(set(start_nodes))+end_nodes+[73]*len(list(set(end_nodes)))
-            cost=[1]*len(start_nodes_new)
-            supply_list=list(set(start_nodes+end_nodes))
-            SD_positive=[]
-            SD_negative=[]
+            num_start = len(list(set(start_nodes)))
+            start_nodes_new = [72] * num_start + start_nodes + list(set(end_nodes))
+            end_nodes_new = list(set(start_nodes)) + end_nodes + [73] * len(list(set(end_nodes)))
+            cost = [1] * len(start_nodes_new)
+            supply_list = list(set(start_nodes + end_nodes))
+            SD_positive = []
+            SD_negative = []
             for i in supply_list:
-                if len(self.Clusters[i].Orders)-len(self.Clusters[i].IdleVehicles)<0:
-                    SD_positive.append(-len(self.Clusters[i].Orders)+len(self.Clusters[i].IdleVehicles))
+                if len(self.Clusters[i].Orders) - len(self.Clusters[i].IdleVehicles) < 0:
+                    SD_positive.append(-len(self.Clusters[i].Orders) + len(self.Clusters[i].IdleVehicles))
                 else:
-                    SD_negative.append(len(self.Clusters[i].Orders)-len(self.Clusters[i].IdleVehicles))
-            capacity=SD_positive+[1000]*(len(start_nodes_new)-len(SD_positive))
+                    SD_negative.append(len(self.Clusters[i].Orders) - len(self.Clusters[i].IdleVehicles))
+            capacity = SD_positive + [1000] * (len(start_nodes_new) - len(SD_positive))
 
-            SD=[sum(SD_positive)]+[0]*len(supply_list)+[-sum(SD_positive)]
-            #print('start',start_nodes_new,len(start_nodes_new))
-            #print('end',end_nodes_new,len(end_nodes_new))
-            #print('capacity',capacity,len(capacity))
+            SD = [sum(SD_positive)] + [0] * len(supply_list) + [-sum(SD_positive)]
 
-            start_nodes_new=np.array(start_nodes_new)
-            end_nodes_new=np.array(end_nodes_new)
-            cost=np.array(cost)
-            capacity=np.array(capacity)
+            start_nodes_new = np.array(start_nodes_new)
+            end_nodes_new = np.array(end_nodes_new)
+            cost = np.array(cost)
+            capacity = np.array(capacity)
             smcf = min_cost_flow.SimpleMinCostFlow()
             all_arcs = smcf.add_arcs_with_capacity_and_unit_cost(
                 start_nodes_new, end_nodes_new, capacity, cost)
 
             # Add supply for each nodes.
-            smcf.set_nodes_supply(np.array([72]+supply_list+[73]), SD)
+            smcf.set_nodes_supply(np.array([72] + supply_list + [73]), SD)
             status = smcf.solve()
             if status != smcf.OPTIMAL:
                 print('There was an issue with the min cost flow input.')
                 print(f'Status: {status}')
                 exit(1)
             solution_flows = smcf.flows(all_arcs)
-            a1=[]
-            b1=[]
-            c1=[]
-            for i in range(num_start,len(solution_flows)-len(list(set(end_nodes)))):
+            a1 = []
+            b1 = []
+            c1 = []
+            for i in range(num_start, len(solution_flows) - len(list(set(end_nodes)))):
                 a1.append(start_nodes_new[i])
                 b1.append(end_nodes_new[i])
                 c1.append(solution_flows[i])
-            d=[]
+            d = []
             d.append(a1)
             d.append(b1)
             d.append(c1)
 
-            min_cost_expect=np.zeros((72,72)) # 起点，终点
+            min_cost_expect = np.zeros((72, 72))
             for iter in range(len(d[0])):
-                min_cost_expect[d[0][iter],d[1][iter]]=d[2][iter] # 把车流保存
+                min_cost_expect[d[0][iter], d[1][iter]] = d[2][iter]
 
-            flow_record=np.zeros((72,72))
+            flow_record = np.zeros((72, 72))
 
             for cluster in self.Clusters:
 
                 if cluster.ID % 9 == 0:
                     self.Refresh_Pre()
 
-                # outflow of each grid is limited
-
                 for vehicle in cluster.IdleVehicles:
-                    self.DispatchNum+=1
+                    self.DispatchNum += 1
                     idle_taxi_h[idxx][step] += 1
 
                     if pre:
-                        NeighborClusters = cluster.Neighbor
                         PreList = self.PreList[vehicle.ID]
                         pre_idxs = [PreList[5], PreList[6], PreList[7], PreList[4], PreList[8], PreList[0],
                                     PreList[3], PreList[2], PreList[1]]
-                        # pre_idxs = [round(x, 3) for x in pre_idxs]
                         pre_idxs = np.array(pre_idxs)
 
                         idxs = pre_idxs.argsort()
@@ -376,37 +238,35 @@ def TEST(self, rand, pre, a, reject_rate, avg_wait, pre_reject, num_disp, idxx, 
 
                     state = GetStateFunction(self, vehicle.ID, cluster, pre_idxs)
 
-                    # 执行MCF
                     neighbours = cluster.Neighbor
-                    already_dispatch=0
+                    already_dispatch = 0
                     for nc in neighbours:
-                        if flow_record[cluster.ID,nc.ID]<min_cost_expect[cluster.ID,nc.ID]:
-                            action = Getidx(cluster.ID, nc.ID)
-                            vehicle.Cluster = Act2Cluster(self, action, vehicle.Cluster)
-                            flow_record[cluster.ID,nc.ID]+=1
-                            already_dispatch=1
+                        if flow_record[cluster.ID, nc.ID] < min_cost_expect[cluster.ID, nc.ID]:
+                            action = self.Getidx(cluster.ID, nc.ID)
+                            vehicle.Cluster = self.Act2Cluster(action, vehicle.Cluster)
+                            flow_record[cluster.ID, nc.ID] += 1
+                            already_dispatch = 1
 
-                    if already_dispatch==0:
-                        action =4
-                        vehicle.Cluster = Act2Cluster(self, action, vehicle.Cluster)
-
+                    if already_dispatch == 0:
+                        action = 4
+                        vehicle.Cluster = self.Act2Cluster(action, vehicle.Cluster)
 
                     if pre:
                         if DM == 'sample':
-                            if random.randrange(0, 10000) / 10000 > pre_idxs[Getidx(cluster.ID, vehicle.Cluster.ID)]:
+                            if random.randrange(0, 10000) / 10000 > pre_idxs[
+                                self.Getidx(cluster.ID, vehicle.Cluster.ID)]:
                                 reject += 1
-                                # print(pre_idxs)
                                 temp = sorted(pre_idxs)
                                 temp = temp[::-1]
                                 for i in range(9):
                                     if random.randrange(0, 10000) / 10000 <= temp[i]:
-                                        vehicle.Cluster = Act2Cluster(self, idxs[i], cluster)
+                                        vehicle.Cluster = self.Act2Cluster(idxs[i], cluster)
                                         break
                                     vehicle.Cluster = cluster
 
                         if DM == 'top4':
                             idxs = idxs[0:int(len(idxs) / 2):1]
-                            idx = Getidx(cluster.ID, vehicle.Cluster.ID)
+                            idx = self.Getidx(cluster.ID, vehicle.Cluster.ID)
                             exist = False
                             for i in idxs:
                                 if i == idx:
@@ -414,7 +274,7 @@ def TEST(self, rand, pre, a, reject_rate, avg_wait, pre_reject, num_disp, idxx, 
                             if exist == False:
                                 reject += 1
                                 np.random.shuffle(idxs)
-                                vehicle.Cluster = Act2Cluster(self, idxs[0], cluster)
+                                vehicle.Cluster = self.Act2Cluster(idxs[0], cluster)
 
                         if DM == 'survey':
                             num_supply = self.SupplyExpect[vehicle.Cluster.ID]
@@ -424,29 +284,26 @@ def TEST(self, rand, pre, a, reject_rate, avg_wait, pre_reject, num_disp, idxx, 
                             else:
                                 expected_income = vehicle.Cluster.potential / num_demand
 
-                            idx = Getidx(cluster.ID, vehicle.Cluster.ID)
+                            idx = self.Getidx(cluster.ID, vehicle.Cluster.ID)
                             ranking = minmax_scale(pre_idxs, (1, 9))
                             ranking = [10 - x for x in ranking]
                             ranking = ranking[idx]
 
                             result = -0.3892 * ranking + 0.2932 * expected_income - 1.3959 + 1.8379 * vehicle.Obey
-                            exist = True
                             vehicle.Auto = False
                             if result < 0:
-                                exist = False
                                 vehicle.Auto = True
                                 incentive += (0 - result) / 0.2932
                                 idxs = idxs[0:int(len(idxs) / 2):1]
                                 reject += 1
-                                # np.random.shuffle(idxs)
-                                vehicle.Cluster = Act2Cluster(self, idxs[0], cluster)
+                                vehicle.Cluster = self.Act2Cluster(idxs[0], cluster)
                                 if (self.DemandExpect[vehicle.Cluster.ID] - self.SupplyExpect[vehicle.Cluster.ID]) <= 0:
                                     negative += 1
                                 else:
                                     positive += 1
                     if vehicle.Cluster == cluster:
                         self.StayExpect[cluster.ID] += 1
-                        self.StayNum+=1
+                        self.StayNum += 1
 
                     RandomNode = random.choice(vehicle.Cluster.Nodes)
                     RandomNode = RandomNode[0]
@@ -459,12 +316,6 @@ def TEST(self, rand, pre, a, reject_rate, avg_wait, pre_reject, num_disp, idxx, 
                         MINUTES * ScheduleCost), self.RealExpTime + self.TimePeriods)
 
                     self.SupplyExpect[vehicle.Cluster.ID] += 1
-
-                    reward = RewardFunction_NEW2(self, state, vehicle.ID, cluster, pre_idxs)
-
-                    total_reward += reward
-                    step_reward += reward
-                    reward_h[idxx][step] += reward
 
                 cluster.IdleVehicles.clear()
 
@@ -508,7 +359,6 @@ def TEST(self, rand, pre, a, reject_rate, avg_wait, pre_reject, num_disp, idxx, 
         a[idxx][step] += SOV
         step += 1
 
-
     print('positive: ', positive)
     print('negative: ', negative)
 
@@ -531,10 +381,6 @@ def TEST(self, rand, pre, a, reject_rate, avg_wait, pre_reject, num_disp, idxx, 
     incentives[idxx] += incentive
     print("----------------------------Experiment over----------------------------")
     if DISPATCH:
-        print('Total reward: ', total_reward)
-        avg_reward = total_reward / self.DispatchNum
-        self.AVGreward = avg_reward
-        print('Average reward: ', avg_reward)
         print('preference reject rate: ', reject / self.DispatchNum)
         pre_reject[idxx] = reject / self.DispatchNum
 
@@ -557,6 +403,7 @@ def TEST(self, rand, pre, a, reject_rate, avg_wait, pre_reject, num_disp, idxx, 
     print("Episode Run time : " + str(dt.datetime.now() - EpisodeStartTime))
     return
 
+
 DispatchMode = "Simulation"
 DemandPredictionMode = "None"
 ClusterMode = "Grid"
@@ -566,9 +413,6 @@ parser.add_argument("--cuda", default=False, action="store_true", help="Enable c
 parser.add_argument("-n", "--name", default='test00', help="Name of the run")
 args = parser.parse_args()
 device = torch.device("cuda:3" if args.cuda else "cpu")
-# save_path = os.path.join("Models","MCF", "_", "saves_episode", "VeRL0-" + args.name)
-# print("save_path: ",save_path)
-# writer_pre_rand = SummaryWriter('cc/Greedy_司机有偏好/')
 
 EPS = 6 * 10
 
@@ -609,7 +453,7 @@ for i in range(EPS):
     rand = False
     pre = True
     TEST(EXPSIM, rand, pre, TOV, reject_rate, avg_wait, pre_reject, num_disp, i, reject_rate_h, idle_taxi_h,
-         order_num_h, reward_h, num_pre_reject,AOV, disp_cost, incentives)
+         order_num_h, reward_h, num_pre_reject, AOV, disp_cost, incentives)
 
 # print(AOV)
 num_pre_reject = num_pre_reject.sum(0)

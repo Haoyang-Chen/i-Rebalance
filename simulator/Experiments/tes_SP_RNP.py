@@ -375,8 +375,8 @@ parser.add_argument("-n", "--name", default='A2C_test', help="Name of the run")
 args = parser.parse_args()
 device = torch.device("cuda:2" if args.cuda else "cpu")
 current_time = datetime.now().strftime('%b%d_%H-%M-%S')
-save_path = os.path.join("../","Models","A2C_pre_nsr", "_", "saves_episode", "Seq-" + args.name)
-save_path2 = os.path.join("../","Models","A2C_pre_sp_rnp", "_", "saves_episode", "Disp-" + args.name)
+save_path = os.path.join("../", "Models", "A2C_pre_nsr", "_", "saves_episode", "Seq-" + args.name)
+save_path2 = os.path.join("../", "Models", "A2C_pre_sp_rnp", "_", "saves_episode", "Disp-" + args.name)
 # os.makedirs(save_path, exist_ok=True)
 
 EPS = 6 * 10
