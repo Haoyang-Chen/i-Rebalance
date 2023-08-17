@@ -305,7 +305,7 @@ class Simulation(object):
         if NEW_PRE:
             self.Node, self.NodeIDList, Orders, Vehicles, self.Map, \
             self.ClassNetList, self.ClassDict, self.HomeLocation, \
-            self.PoILocation, self.VisFreDict, self.NaivePre = ReadAllFiles_TES(idx)
+            self.PoILocation, self.VisFreDict, self.NaivePre = ReadAllFiles_TEST(idx)
         else:
             self.Node, self.NodeIDList, Orders, Vehicles, self.Map, self.NaivePre = ReadAllFiles_OLD()
 

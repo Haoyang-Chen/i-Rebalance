@@ -1,37 +1,21 @@
-import os
-import sys
-import numpy as np
-import pandas as pd
 import datetime as dt
-from datetime import datetime
-import torch
-import pickle
-import time
-
-import torchvision
-import torch
-import numpy as np
 import os
 import pickle
 import random
+import sys
+import time
+from datetime import datetime
 
-from torch.utils.data import Dataset, DataLoader
-from torchvision import datasets
-from torchvision.transforms import ToTensor
-import matplotlib.pyplot as plt
-import torch.utils.data as data_utils
-import matplotlib.pyplot as plt
-from torch import nn, optim
+import numpy as np
+import pandas as pd
+import torch
 import torch.nn.functional as F
-from torch.utils.data import Dataset, DataLoader, TensorDataset
-import pickle
-from torch.utils.tensorboard import SummaryWriter
-import scipy.stats
+from torch import nn
 
 batch_size = 64
 
 l_r = 1e-3
-K = 3  # 假定序列长度为k
+K = 3
 eps = 0.001
 
 if torch.cuda.is_available():
@@ -42,12 +26,10 @@ else:
 
 class CNN(nn.Module):
     def __init__(self):
-        super(CNN, self).__init__()  # CNN，m暂设为40
+        super(CNN, self).__init__()
 
         self.conv1 = nn.Conv2d(4, 10, 2)
         self.conv2 = nn.Conv2d(10, 20, 2)
-        # CNN，从4*5*5->20*2*2->80*1->40*1
-
         self.fc1 = nn.Linear(80, 60)
         self.fc2 = nn.Linear(60, 40)
 
@@ -73,9 +55,9 @@ class CNN(nn.Module):
 
 class FC1(nn.Module):
     def __init__(self):
-        super(FC1, self).__init__()  # 第一个全连接，y暂设为4
+        super(FC1, self).__init__()
 
-        self.fc1 = nn.Linear(6, 6)  # 从8->y
+        self.fc1 = nn.Linear(6, 6)
         self.fc2 = nn.Linear(6, 4)
 
     def forward(self, x):
@@ -90,9 +72,9 @@ class FC1(nn.Module):
 
 class FC2(nn.Module):
     def __init__(self):
-        super(FC2, self).__init__()  # 第二个全连接，n暂设为6
+        super(FC2, self).__init__()
 
-        self.fc3 = nn.Linear(25, 10)  # 从（2+23）*1->n*1
+        self.fc3 = nn.Linear(25, 10)
         self.fc4 = nn.Linear(10, 6)
 
     def forward(self, x):
@@ -117,7 +99,7 @@ class FrontNet(nn.Module):  # fc+cnn  batch*50
         ft = fs[:, 25:125]
         ft_data = torch.zeros(batch_size, 4, 5, 5)  # batchsize*channel*size*size
         clu_num = 0
-        # 将ft调整成适应CNN的输入   [0,1,2; 3,4,5; 6,7,8]
+
         for i in range(25, 125, 4):
             row = int(clu_num / 5)
             col = int(clu_num % 5)
@@ -128,7 +110,6 @@ class FrontNet(nn.Module):  # fc+cnn  batch*50
             ft_data[:, 3, row, col] = ft[:, i + 3 - 25]
             clu_num += 1
 
-        # GPU加速
         ft_data = ft_data.to(device)  # batchsize*channel*size*size
         fc = fc.to(device)  # batchsize*6
         fm_d = fm_d.to(device)  # batchsize*25
@@ -140,42 +121,40 @@ class FrontNet(nn.Module):  # fc+cnn  batch*50
         return torch.cat((first, second, third), 1)
 
 
-class LSTM(nn.Module):  # 参考 https://blog.csdn.net/Cyril_KI/article/details/122557880
+class LSTM(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers, output_size, batch_size):
         super().__init__()
         self.input_size = input_size  # feature_size
         self.hidden_size = hidden_size
         self.num_layers = num_layers
         self.output_size = output_size
-        self.num_directions = 1  # 单向LSTM
+        self.num_directions = 1
         self.batch_size = batch_size
 
         self.lstm = nn.LSTM(self.input_size, self.hidden_size, self.num_layers, batch_first=True)
         self.linear = nn.Linear(self.hidden_size, self.output_size)
 
     def forward(self, input_seq):
-        # 初始参数设置
         h_0 = torch.randn(self.num_directions * self.num_layers, self.batch_size, self.hidden_size).to(device)
         c_0 = torch.randn(self.num_directions * self.num_layers, self.batch_size, self.hidden_size).to(device)
 
-        seq_len = input_seq.shape[1]  # 5，应该是放的时间序列长度
+        seq_len = input_seq.shape[1]
 
         # input(batch_size, seq_len, input_size)
         ipt_size = 50
-        input_seq = input_seq.view(self.batch_size, seq_len, ipt_size)  # batch*5*50 转为(batch*5*50)
+        input_seq = input_seq.view(self.batch_size, seq_len, ipt_size)
 
         # output(batch_size, seq_len, num_directions * hidden_size)
         output, _ = self.lstm(input_seq, (h_0, c_0))  # output(batch，5，1*64)
-        output = output.contiguous().view(self.batch_size * seq_len, self.hidden_size)  # 转为(batch*5, 64)
+        output = output.contiguous().view(self.batch_size * seq_len, self.hidden_size)
         pred = self.linear(output)  # pred(batch*5, 9)
         pred = pred.view(self.batch_size, seq_len, -1)  # (batch*5*9)
 
-        # 由于输出是输入右移，我们只需要取pred第二维度（time）中的最后一个数据
         pred = pred[:, -1, :]  # (batch*9)
         return pred
 
 
-class MyNets(nn.Module):  # 参考https://blog.csdn.net/Cyril_KI/article/details/122569775
+class MyNets(nn.Module):
     def __init__(self):
         super(MyNets, self).__init__()
 
@@ -183,8 +162,6 @@ class MyNets(nn.Module):  # 参考https://blog.csdn.net/Cyril_KI/article/details
         self.fn2 = FrontNet()
         self.fn3 = FrontNet()
 
-        # self.fn4 = FrontNet()
-        # self.fn5 = FrontNet()
         self.LSTM = LSTM(input_size=50, hidden_size=64, num_layers=3, output_size=9, batch_size=batch_size)
 
     def forward(self, input_data):  # input_data=batchsize*665
@@ -226,17 +203,17 @@ def timestamp_datetime(value):
     return t
 
 
-def string_datetime(value):  # 转成string
+def string_datetime(value):
     return dt.datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
 
 
-def string_pdTimestamp(value):  # 转成pandas
+def string_pdTimestamp(value):
     d = string_datetime(value)
     t = pd.Timestamp(d.year, d.month, d.day, d.hour, d.minute)
     return t
 
 
-def return_timestamp(tim):  # char->int(time_stamp)
+def return_timestamp(tim):
     s_t = time.strptime(tim, " %Y/%m/%d %H:%M:%S")
     timeStamp = int(time.mktime(s_t))
     return timeStamp
@@ -306,7 +283,6 @@ def ReadOrder(input_file_path):
         columns=['End_time', 'PointS_Longitude', 'PointS_Latitude', 'PointE_Longitude', 'PointE_Latitude'])
     Order["Start_time"] = Order["Start_time"].apply(timestamp_datetime)
 
-    # 自定义读取Order数量
     Order_Num = 25000
     Order.drop(labels=list(range(Order_Num, len(Order))), axis=0, inplace=True)
 
@@ -327,40 +303,37 @@ def ReadResetOrder(input_file_path):
 
 
 def Creat_Obey(driver_num):
-    outcome=np.zeros(driver_num)
-    bound=[0.0583,0.0117,0.3058,0.3867,0.3970,0.5912,0.6990,0.7638,0.8759,0.9407]
+    outcome = np.zeros(driver_num)
+    bound = [0.0583, 0.0117, 0.3058, 0.3867, 0.3970, 0.5912, 0.6990, 0.7638, 0.8759, 0.9407]
     for i in range(driver_num):
-        coin=random.randrange(0,10000,1)/10000
+        coin = random.randrange(0, 10000, 1) / 10000
         for j in range(10):
-            if coin<bound[j]:
-                outcome[i]=j*0.1
+            if coin < bound[j]:
+                outcome[i] = j * 0.1
                 break
-            if j==9:
-                outcome[i]=1
+            if j == 9:
+                outcome[i] = 1
     return outcome
 
 
-def ReadDriver(input_file_path):  # 0804训练  0803测试
+def ReadDriver(input_file_path):
     reader = pd.read_csv(input_file_path, chunksize=1000)
     Driver = []
     for chunk in reader:
         Driver.append(chunk)
     Driver = pd.concat(Driver)
-    # Driver = Driver.drop(columns=['Start_time'])
     Driver["Start_time"] = [return_timestamp(i) for i in Driver["Start_time"]]
     Driver["Start_time"] = Driver["Start_time"].apply(timestamp_datetime)
-    Rand_Obey=Creat_Obey(Driver.shape[0])
-    # print(Rand_Obey)
-    Driver.insert(loc=3,column="Obey",value=Rand_Obey)
+    Rand_Obey = Creat_Obey(Driver.shape[0])
+    Driver.insert(loc=3, column="Obey", value=Rand_Obey)
     Driver = Driver.values
     return Driver
 
 
-########################################################################################################################
 def ReadRidePreference(input_file_path):
-    RP= pd.read_csv(os.path.join(input_file_path, 'RidePreference.csv'), header=None).values
+    RP = pd.read_csv(os.path.join(input_file_path, 'RidePreference.csv'), header=None).values
     return RP
-########################################################################################################################
+
 
 def ReadPreNet(input_file_path):
     ClassNet0 = MyNets()
@@ -397,7 +370,6 @@ def ReadHomeLocation(input_file_path):
     HomeLocation = pd.read_csv(os.path.join(input_file_path, 'home_info.csv')).values
     driver_id = HomeLocation[:, 0]
     lo_la = HomeLocation[:, 1:3]
-    # Home_Dict = dict(zip(driver_id, lo_la))
     return lo_la
 
 
@@ -423,7 +395,7 @@ def ReadAllFiles():
         if file[-3:] == "csv":
             order_set.append(file)
 
-    OrdersPath = os.path.join(os.path.dirname(sys.path[0]),"data","Order_List", random.choice(order_set))
+    OrdersPath = os.path.join(os.path.dirname(sys.path[0]), "data", "Order_List", random.choice(order_set))
     VehiclesPath = os.path.join(os.path.dirname(sys.path[0]), "data", "Vehicle_List", 'Vehicle_List') + OrdersPath[-8:]
 
     print("using: ", OrdersPath, VehiclesPath)
@@ -446,9 +418,8 @@ def ReadAllFiles():
     return Node, NodeIDList, Orders, Vehicles, Map, ClassNetList, ClassDict, HomeLocation, PoILocation, VisFreDict, RidePreference
 
 
-def ReadAllFiles_TES(idx):
+def ReadAllFiles_TEST(idx):
     NodePath = os.path.join(os.path.dirname(sys.path[0]), "data", "Node.csv")
-    # print(NodePath)
     NodeIDListPath = os.path.join(os.path.dirname(sys.path[0]), "data", "NodeIDList.txt")
 
     path = os.path.join(os.path.dirname(sys.path[0]), "data")
@@ -458,12 +429,8 @@ def ReadAllFiles_TES(idx):
         if file[-3:] == "csv":
             order_set.append(file)
 
-    OrdersPath = os.path.join(os.path.dirname(sys.path[0]),"data","Order_List", order_set[idx])
+    OrdersPath = os.path.join(os.path.dirname(sys.path[0]), "data", "Order_List", order_set[idx])
     VehiclesPath = os.path.join(os.path.dirname(sys.path[0]), "data", "Vehicle_List", 'Vehicle_List') + OrdersPath[-8:]
-
-
-    # OrdersPath = os.path.join(os.path.dirname(sys.path[0]),"data","Order_List", "Order_08_10.csv")
-    # VehiclesPath = os.path.join(os.path.dirname(sys.path[0]), "data", "Vehicle_List", 'Vehicle_List8_10.csv')
 
     print("using: ", OrdersPath, VehiclesPath)
     MapPath = os.path.join(os.path.dirname(sys.path[0]), "data", "AccurateMap.csv")
@@ -501,6 +468,6 @@ def ReadAllFiles_OLD():
     Vehicles = ReadDriver(VehiclesPath)
     Map = ReadCostMap(MapPath)
 
-    RidePreference=ReadRidePreference(PrePath)
-    
+    RidePreference = ReadRidePreference(PrePath)
+
     return Node, NodeIDList, Orders, Vehicles, Map, RidePreference
