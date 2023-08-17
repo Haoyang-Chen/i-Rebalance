@@ -3,16 +3,16 @@ from config.setting import *
 class Cluster(object):
 
     def __init__(self, ID, Nodes, Neighbor, RebalanceNumber, IdleVehicles, VehiclesArrivetime, Orders):
-        self.ID = ID  # int        编号
-        self.Nodes = Nodes  # list       节点列表
-        self.Neighbor = Neighbor  # list       相邻cluster列表
-        self.RebalanceNumber = RebalanceNumber  # int
-        self.IdleVehicles = IdleVehicles  # list       空车列表
-        self.VehiclesArrivetime = VehiclesArrivetime  # dict       即将到达(sorted)
-        self.Orders = Orders  # list       订单列表
+        self.ID = ID
+        self.Nodes = Nodes
+        self.Neighbor = Neighbor
+        self.RebalanceNumber = RebalanceNumber
+        self.IdleVehicles = IdleVehicles
+        self.VehiclesArrivetime = VehiclesArrivetime
+        self.Orders = Orders
         self.PerRebalanceIdleVehicles = 0
         self.LaterRebalanceIdleVehicles = 0
-        self.PerMatchIdleVehicles = 0  # 在match（）后重制，表示当前match（）时有多少量空车
+        self.PerMatchIdleVehicles = 0
         self.RebalanceFrequency = 0
         self.potential = 0
 
@@ -32,9 +32,9 @@ class Cluster(object):
         self.PerMatchIdleVehicles = 0
         self.potential = 0
 
-    def ArriveClusterUpDate(self, vehicle):  # 添加车辆
+    def ArriveClusterUpDate(self, vehicle):
         self.IdleVehicles.append(vehicle)
-        self.VehiclesArrivetime.pop(vehicle)  # 推出即将到达
+        self.VehiclesArrivetime.pop(vehicle)
 
     def Example(self):
         print("Order Example output")
@@ -91,13 +91,12 @@ class Vehicle(object):
         self.Orders = Orders  # Orders currently on board
         self.DeliveryPoint = DeliveryPoint  # Next destination of current vehicle
         self.LstmLog = np.zeros((3, 131))
-        self.LogPointer = 3  # 初始化
+        self.LogPointer = 3
         self.Auto = False
         self.Obey = obey
         self.StartTime = time
 
-    def ArriveVehicleUpDate(self, time, value, DeliveryCluster):  # 移动车辆
-        # self.idle_start_time = time
+    def ArriveVehicleUpDate(self, time, value, DeliveryCluster):
         self.Sum_order_num += 1
         self.Sum_order_value += value
         self.LocationNode = self.DeliveryPoint
@@ -106,7 +105,7 @@ class Vehicle(object):
         if len(self.Orders):
             self.Orders.clear()
 
-    def Reset(self):  # 清空所有操作
+    def Reset(self):
         self.Orders.clear()
         self.idle_start_time = 0
         self.DeliveryPoint = None
@@ -119,10 +118,9 @@ class Vehicle(object):
             now_time = last_time = 0
             self.LogPointer = 2
         else:
-            # 判断是否连续巡航
             now_time = NewLog[0, 0]
             last_time = self.LstmLog[2, 0]
-        if abs(last_time - now_time) < 10:  # 连续巡航
+        if abs(last_time - now_time) < 10:
             if self.LogPointer == 2:
                 self.LstmLog = np.zeros((3, 131))
                 self.LstmLog[self.LogPointer, :] = NewLog
