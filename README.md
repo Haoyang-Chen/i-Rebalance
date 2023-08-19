@@ -38,7 +38,7 @@ python Disp_Seq_A2C.py --cuda
 data							
 │
 ├── AccurateMap.csv		min distance between each node
-├── Node.csv		location of each node
+├── Node.csv		    location of each node
 ├── NodeIDList.txt		ID list of valid nodes
 ├── questionaire.csv		survey outcome
 │
