@@ -51,16 +51,16 @@ data
 │   └── Order_08_10.csv
 │
 ├── PreData											
-│   ├── clustering_outcome.csv		driver ID and cluster mapping
-│   ├── DriverFamilarity.csv		driver's familarity to grid
+│   ├── clustering_outcome.csv	driver ID and cluster mapping
+│   ├── DriverFamilarity.csv	driver's familarity to grid
 │   ├── home_info.csv		driver's home location
-│   ├── poi_location.pkl		grid's POI info		
+│   ├── poi_location.pkl	grid's POI info		
 │   ├── Pre_Class0.pt		pre_trained preference model
 │   ├── Pre_Class1.pt
 │   ├── Pre_Class2.pt
 │   ├── Pre_Class3.pt
 │   ├── Pre_Class4.pt
-│   └── RidePreference.csv		collective preference
+│   └── RidePreference.csv	collective preference
 │
 └── Vehicle_List		vehicles' ID & first location
     ├── Vehicle_List8_03.csv
