@@ -37,12 +37,12 @@ python Disp_Seq_A2C.py --cuda
 ```
 data							
 │
-├── AccurateMap.csv		min distance between each node
-├── Node.csv		        location of each node
-├── NodeIDList.txt		ID list of valid nodes
-├── questionaire.csv		survey outcome
+├── AccurateMap.csv		    min distance between each node
+├── Node.csv		            location of each node
+├── NodeIDList.txt		    ID list of valid nodes
+├── questionaire.csv		    survey outcome
 │
-├── Order_List		        Order info of one day
+├── Order_List		            Order info of one day
 │   ├── Order_08_03.csv					
 │   ├── Order_08_04.csv
 │   ├── Order_08_05.csv
@@ -51,18 +51,18 @@ data
 │   └── Order_08_10.csv
 │
 ├── PreData											
-│   ├── clustering_outcome.csv	driver ID and cluster mapping
-│   ├── DriverFamilarity.csv	driver's familarity to grid
-│   ├── home_info.csv		driver's home location
-│   ├── poi_location.pkl	grid's POI info		
-│   ├── Pre_Class0.pt		pre_trained preference model
+│   ├── clustering_outcome.csv	    driver ID and cluster mapping
+│   ├── DriverFamilarity.csv	    driver's familarity to grid
+│   ├── home_info.csv		    driver's home location
+│   ├── poi_location.pkl	    grid's POI info		
+│   ├── Pre_Class0.pt		    pre_trained preference model
 │   ├── Pre_Class1.pt
 │   ├── Pre_Class2.pt
 │   ├── Pre_Class3.pt
 │   ├── Pre_Class4.pt
-│   └── RidePreference.csv	collective preference
+│   └── RidePreference.csv	    collective preference
 │
-└── Vehicle_List		vehicles' ID & first location
+└── Vehicle_List		    vehicles' ID & first location
     ├── Vehicle_List8_03.csv
     ├── Vehicle_List8_04.csv
     ├── Vehicle_List8_05.csv
