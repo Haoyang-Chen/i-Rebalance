@@ -23,11 +23,22 @@ cd I-Rebalance
 conda env create -f environment.yaml  
 ```
 
-to train a model:
+## Model Training and Testing
+
+to train an I-Rebalance model:
 
 ```
 cd simulator/train
 python Disp_Seq_A2C.py --cuda
+```
+
+resulting models are stored in simulator/models
+
+to test an I-Rebalance model:
+
+```
+cd simulator/Experiments
+python tes_Disp_Seq.py
 ```
 
 ## Data Structure
