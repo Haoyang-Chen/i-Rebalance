@@ -32,7 +32,7 @@ python Disp_Seq_A2C.py --cuda
 
 ## Data Structure
 
-<span style="color:red;">Due to file size limitation, some of the data are not available, we define their structures here</span>
+<span style="color:red;">Due to file size limitation, some of the data and models are not uploaded, we define their structures here</span>
 
 ```
 data							
