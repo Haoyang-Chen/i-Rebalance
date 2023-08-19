@@ -239,12 +239,9 @@ class Simulation(object):
 
     def CreateAllInstantiate(self):
         print("Read all files")
-        if NEW_PRE:
-            self.Node, self.NodeIDList, Orders, Vehicles, self.Map, \
-            self.ClassNetList, self.ClassDict, self.HomeLocation, \
-            self.PoILocation, self.VisFreDict, self.NaivePre = ReadAllFiles()
-        else:
-            self.Node, self.NodeIDList, Orders, Vehicles, self.Map, self.NaivePre = ReadAllFiles_OLD()
+        self.Node, self.NodeIDList, Orders, Vehicles, self.Map, \
+        self.ClassNetList, self.ClassDict, self.HomeLocation, \
+        self.PoILocation, self.VisFreDict, self.NaivePre = ReadAllFiles()
 
         print("Create Grids")
         self.Clusters = self.CreateGrid()
@@ -302,12 +299,10 @@ class Simulation(object):
 
     def CreateAllInstantiate_TEST(self, idx):
         print("Read all files")
-        if NEW_PRE:
-            self.Node, self.NodeIDList, Orders, Vehicles, self.Map, \
-            self.ClassNetList, self.ClassDict, self.HomeLocation, \
-            self.PoILocation, self.VisFreDict, self.NaivePre = ReadAllFiles_TEST(idx)
-        else:
-            self.Node, self.NodeIDList, Orders, Vehicles, self.Map, self.NaivePre = ReadAllFiles_OLD()
+
+        self.Node, self.NodeIDList, Orders, Vehicles, self.Map, \
+        self.ClassNetList, self.ClassDict, self.HomeLocation, \
+        self.PoILocation, self.VisFreDict, self.NaivePre = ReadAllFiles_TEST(idx)
 
         print("Create Grids")
         self.Clusters = self.CreateGrid()

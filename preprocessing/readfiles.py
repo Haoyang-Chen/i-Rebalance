@@ -450,24 +450,3 @@ def ReadAllFiles_TEST(idx):
     RidePreference = ReadRidePreference(PrePath)
 
     return Node, NodeIDList, Orders, Vehicles, Map, ClassNetList, ClassDict, HomeLocation, PoILocation, VisFreDict, RidePreference
-
-
-def ReadAllFiles_OLD():
-    NodePath = os.path.join(os.path.dirname(sys.path[0]), "data", "Node.csv")
-    NodeIDListPath = os.path.join(os.path.dirname(sys.path[0]), "data", "NodeIDList.txt")
-
-    OrdersPath = os.path.join(os.path.dirname(sys.path[0]), "data", "Order_List", "Order_08_4.csv")
-
-    VehiclesPath = os.path.join(os.path.dirname(sys.path[0]), "data", "Vehicle_List", 'Vehicle_List804.csv')
-    MapPath = os.path.join(os.path.dirname(sys.path[0]), "data", "AccurateMap.csv")
-    PrePath = os.path.join(os.path.dirname(sys.path[0]), 'data', 'PreData')
-
-    Node = ReadNode(NodePath)
-    NodeIDList = ReadNodeIDList(NodeIDListPath)
-    Orders = ReadOrder(OrdersPath)
-    Vehicles = ReadDriver(VehiclesPath)
-    Map = ReadCostMap(MapPath)
-
-    RidePreference = ReadRidePreference(PrePath)
-
-    return Node, NodeIDList, Orders, Vehicles, Map, RidePreference

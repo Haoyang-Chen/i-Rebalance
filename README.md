@@ -23,3 +23,63 @@ cd I-Rebalance
 conda env create -f environment.yaml  
 ```
 
+to train a model:
+
+```
+cd simulator/train
+python Disp_Seq_A2C.py --cuda
+```
+
+## Data Structure
+
+```
+data							
+│
+├── AccurateMap.csv				
+├── Node.csv
+├── NodeIDList.txt
+├── questionaire.csv
+│
+├── driver_clustering
+│   ├── center0.csv
+│   ├── center1.csv
+│   ├── center2.csv
+│   ├── center3.csv
+│   ├── center4.csv
+│   └── clustering_outcome.csv
+│
+├── Order_List
+│   ├── Order_08_03.csv
+│   ├── Order_08_04.csv
+│   ├── Order_08_05.csv
+│   ├── Order_08_06.csv
+│   ├── Order_08_09.csv
+│   └── Order_08_10.csv
+│
+├── PreData
+│   ├── clustering_outcome.csv
+│   ├── DriverFamilarity.csv
+│   ├── home_info.csv
+│   ├── poi_location.pkl
+│   ├── Pre_Class0_o.pt
+│   ├── Pre_Class0.pt
+│   ├── Pre_Class1_o.pt
+│   ├── Pre_Class1.pt
+│   ├── Pre_Class2_o.pt
+│   ├── Pre_Class2.pt
+│   ├── Pre_Class3_o.pt
+│   ├── Pre_Class3.pt
+│   ├── Pre_Class4_o.pt
+│   ├── Pre_Class4.pt
+│   └── RidePreference.csv
+│
+└── Vehicle_List
+    ├── Vehicle_List8_03.csv
+    ├── Vehicle_List8_04.csv
+    ├── Vehicle_List8_05.csv
+    ├── Vehicle_List8_06.csv
+    ├── Vehicle_List8_09.csv
+    └── Vehicle_List8_10.csv
+
+```
+
