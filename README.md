@@ -14,7 +14,7 @@ We present **i-Rebalance**, a novel personalized vehicle repositioning technique
 
 ## Methodology
 
-i-Rebalance employs a dual-agent DRL framework consisting of Grid Agent and Vehicle Agent. Grid Agent determines the optimal repositioning order of idle vehicles within the grid, while Vehicle Agent provides personalized recommendations to each vehicle based on their preferences and real-time context.
+i-Rebalance employs a dual-agent DRL framework consisting of Grid Agent and Vehicle Agent. Grid Agent determines the optimal repositioning order of idle vehicles within the grid, while Vehicle Agent provides personalized recommendations to each vehicle based on their preferences and predicted demand-supply gap.
 
 ## Installation 
 
