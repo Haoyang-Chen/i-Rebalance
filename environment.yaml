@@ -1,4 +1,4 @@
-name: base
+name: i-rebalance
 channels:
   - defaults
 dependencies:
